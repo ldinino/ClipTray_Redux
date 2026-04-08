@@ -276,23 +276,8 @@ namespace ClipTray.UI
             base.Dispose(disposing);
         }
 
-        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool DestroyIcon(IntPtr hIcon);
-
         private static Icon LoadEmbeddedIcon()
         {
-            string shell32Path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.System), "shell32.dll");
-            IntPtr hIcon = ExtractIcon(IntPtr.Zero, shell32Path, 260);
-            if (hIcon != IntPtr.Zero)
-            {
-                Icon extracted = Icon.FromHandle(hIcon).Clone() as Icon;
-                DestroyIcon(hIcon);
-                return extracted;
-            }
             return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         }
 

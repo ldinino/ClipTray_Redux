@@ -5,3 +5,7 @@ obj/
 .vs/
 publish/
 *.pdb
+.claude/
+PLAN.md
+*.zip
+*.sln

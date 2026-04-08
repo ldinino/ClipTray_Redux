@@ -23,11 +23,11 @@ End:
 Title:NEW EMAIL
 Hi there,
 
-Thank you for contacting Microsoft Support.
+Thank you for contacting Technical Support.
 End:
 
-Title:Reroute
-I've gone ahead and changed the support path of this case to <TEAM>.
+Title:Survey
+If you have some spare time, I'd love to find a few minutes to collect a brief phone survey. It goes a long way to help us understand how we can improve.
 End:
 ```
 

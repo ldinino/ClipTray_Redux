@@ -42,7 +42,7 @@ namespace ClipTray.UI
                 AutoSize = true
             };
 
-            var authorText = "Rebuilt for the future by Luciano DiNino,\nplease email ldinino@microsoft.com if you find a bug.";
+            var authorText = "Rebuilt for the future by Luciano DiNino.\nPlease email ldinino@microsoft.com if you find a bug.";
             var emailStart = authorText.IndexOf("ldinino@microsoft.com");
             var authorLabel = new LinkLabel
             {
