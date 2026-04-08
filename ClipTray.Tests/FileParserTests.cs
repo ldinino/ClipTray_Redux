@@ -1,0 +1,227 @@
+using System.IO;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ClipTray.Data;
+
+namespace ClipTray.Tests
+{
+    [TestClass]
+    public class FileParserTests
+    {
+        [TestMethod]
+        public void Parse_EmptyFile_ReturnsEmptyList()
+        {
+            var entries = FileParser.ParseLines(new string[0]);
+            Assert.AreEqual(0, entries.Count);
+        }
+
+        [TestMethod]
+        public void Parse_PreambleOnly_ReturnsEmptyList()
+        {
+            var lines = new[] { "End:", "" };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(0, entries.Count);
+        }
+
+        [TestMethod]
+        public void Parse_SingleEntry_ReturnsSingleEntry()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Greeting",
+                "Hello, world!",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Greeting", entries[0].Title);
+            Assert.AreEqual("Hello, world!", entries[0].Text);
+        }
+
+        [TestMethod]
+        public void Parse_MultipleEntries_ReturnsAll()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:First",
+                "Body one",
+                "End:",
+                "",
+                "Title:Second",
+                "Body two",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(2, entries.Count);
+            Assert.AreEqual("First", entries[0].Title);
+            Assert.AreEqual("Body one", entries[0].Text);
+            Assert.AreEqual("Second", entries[1].Title);
+            Assert.AreEqual("Body two", entries[1].Text);
+        }
+
+        [TestMethod]
+        public void Parse_MultilineBody_PreservesAllLines()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Email",
+                "Hi there,",
+                "",
+                "Thank you for contacting us.",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Email", entries[0].Title);
+            Assert.AreEqual("Hi there,\r\n\r\nThank you for contacting us.", entries[0].Text);
+        }
+
+        [TestMethod]
+        public void Parse_MissingEnd_DiscardsIncompleteEntry()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Complete",
+                "Body",
+                "End:",
+                "",
+                "Title:Incomplete",
+                "No end marker"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Complete", entries[0].Title);
+        }
+
+        [TestMethod]
+        public void Parse_MissingEndFollowedByTitle_DiscardsFirst()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Broken",
+                "No end here",
+                "Title:Good",
+                "Valid body",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Good", entries[0].Title);
+            Assert.AreEqual("Valid body", entries[0].Text);
+        }
+
+        [TestMethod]
+        public void Parse_EmptyBody_ReturnsEmptyText()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:EmptyBody",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("EmptyBody", entries[0].Title);
+            Assert.AreEqual("", entries[0].Text);
+        }
+
+        [TestMethod]
+        public void Parse_GarbageInput_ReturnsEmptyList()
+        {
+            var lines = new[]
+            {
+                "random text",
+                "more garbage",
+                "nothing useful"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(0, entries.Count);
+        }
+
+        [TestMethod]
+        public void Parse_EndOutsideEntry_IsNoOp()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "End:",
+                "",
+                "Title:After",
+                "Text",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("After", entries[0].Title);
+        }
+
+        [TestMethod]
+        public void Parse_FromFile_ReadsCorrectly()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(path, "End:\r\n\r\nTitle:FileTest\r\nFile body\r\nEnd:\r\n");
+                var entries = FileParser.Parse(path);
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("FileTest", entries[0].Title);
+                Assert.AreEqual("File body", entries[0].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Parse_NonexistentFile_ReturnsEmptyList()
+        {
+            var entries = FileParser.Parse(@"C:\nonexistent_path_12345\file.txt");
+            Assert.AreEqual(0, entries.Count);
+        }
+
+        [TestMethod]
+        public void CreateDefaultFile_CreatesFileWithPreamble()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                FileParser.CreateDefaultFile(path);
+                var content = File.ReadAllText(path);
+                Assert.AreEqual("End:\r\n\r\n", content);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Parse_BodyWithTrailingBlankLines_StripsTrailingBlanks()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Trailing",
+                "Line one",
+                "",
+                "",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Line one", entries[0].Text);
+        }
+    }
+}
