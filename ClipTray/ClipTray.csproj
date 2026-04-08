@@ -19,7 +19,4 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\ClipTray.ico" />
-  </ItemGroup>
 </Project>

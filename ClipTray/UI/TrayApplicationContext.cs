@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -276,12 +276,23 @@ namespace ClipTray.UI
             base.Dispose(disposing);
         }
 
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
         private static Icon LoadEmbeddedIcon()
         {
-            var asm = Assembly.GetExecutingAssembly();
-            var stream = asm.GetManifestResourceStream("ClipTray.Resources.ClipTray.ico");
-            if (stream != null)
-                return new Icon(stream);
+            string shell32Path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System), "shell32.dll");
+            IntPtr hIcon = ExtractIcon(IntPtr.Zero, shell32Path, 260);
+            if (hIcon != IntPtr.Zero)
+            {
+                Icon extracted = Icon.FromHandle(hIcon).Clone() as Icon;
+                DestroyIcon(hIcon);
+                return extracted;
+            }
             return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         }
 
