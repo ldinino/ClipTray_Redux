@@ -30,7 +30,7 @@ namespace ClipTray.UI
 
             _notifyIcon = new NotifyIcon
             {
-                Icon = SystemIcons.Application,
+                Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
                 Text = TruncateTooltip(Path.GetFileName(_filePath)),
                 Visible = true,
                 ContextMenuStrip = BuildMenu()
@@ -151,14 +151,28 @@ namespace ClipTray.UI
             }
         }
 
+        private void ShowAddDialog()
+        {
+            using (var dlg = new AddEntryDialog(_entries, _filePath))
+            {
+                dlg.EntryAdded += (s, ev) => RefreshMenu();
+                dlg.ShowDialog();
+            }
+            RefreshMenu();
+        }
+
         private void AddItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 3
+            ShowAddDialog();
         }
 
         private void EditItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 3
+            using (var dlg = new EditorDialog(_entries, _filePath))
+            {
+                dlg.ShowDialog();
+            }
+            RefreshMenu();
         }
 
         private void OpenCreateItem_Click(object sender, EventArgs e)
@@ -184,9 +198,7 @@ namespace ClipTray.UI
         private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
-            {
-                // Placeholder — opens Add dialog in Phase 3
-            }
+                ShowAddDialog();
         }
 
         private void ExitItem_Click(object sender, EventArgs e)
