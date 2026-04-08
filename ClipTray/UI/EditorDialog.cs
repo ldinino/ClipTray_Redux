@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -148,8 +149,22 @@ namespace ClipTray.UI
 
             if (result == DialogResult.Yes)
             {
-                _entries.RemoveAt(_comboBox.SelectedIndex);
-                FileWriter.Write(_filePath, _entries);
+                int idx = _comboBox.SelectedIndex;
+                var removed = _entries[idx];
+                _entries.RemoveAt(idx);
+
+                try
+                {
+                    FileWriter.Write(_filePath, _entries);
+                }
+                catch (IOException ex)
+                {
+                    _entries.Insert(idx, removed);
+                    MessageBox.Show("Could not save file:\n" + ex.Message,
+                        "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
                 RefreshComboBox();
             }
         }

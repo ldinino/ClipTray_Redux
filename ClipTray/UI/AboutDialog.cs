@@ -1,0 +1,73 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace ClipTray.UI
+{
+    public class AboutDialog : Form
+    {
+        public AboutDialog()
+        {
+            InitializeComponents();
+        }
+
+        private void InitializeComponents()
+        {
+            Text = "About ClipTray";
+            Size = new Size(340, 210);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterScreen;
+
+            var nameLabel = new Label
+            {
+                Text = "ClipTray",
+                Font = new Font(Font.FontFamily, 14f, FontStyle.Bold),
+                Location = new Point(12, 15),
+                AutoSize = true
+            };
+
+            var versionLabel = new Label
+            {
+                Text = "Version 1.0.0",
+                Location = new Point(12, 50),
+                AutoSize = true
+            };
+
+            var descLabel = new Label
+            {
+                Text = "A system tray clipboard manager.",
+                Location = new Point(12, 75),
+                AutoSize = true
+            };
+
+            var authorText = "Rebuilt for the future by Luciano DiNino,\nplease email ldinino@microsoft.com if you find a bug.";
+            var emailStart = authorText.IndexOf("ldinino@microsoft.com");
+            var authorLabel = new LinkLabel
+            {
+                Text = authorText,
+                Location = new Point(12, 95),
+                AutoSize = true
+            };
+            authorLabel.Links.Clear();
+            authorLabel.Links.Add(emailStart, "ldinino@microsoft.com".Length, "mailto:ldinino@microsoft.com");
+            authorLabel.LinkClicked += (s, e) =>
+            {
+                Process.Start(e.Link.LinkData.ToString());
+            };
+
+            var okButton = new Button
+            {
+                Text = "OK",
+                Location = new Point(240, 135),
+                Size = new Size(75, 28),
+                DialogResult = DialogResult.OK
+            };
+
+            AcceptButton = okButton;
+
+            Controls.AddRange(new Control[] { nameLabel, versionLabel, descLabel, authorLabel, okButton });
+        }
+    }
+}

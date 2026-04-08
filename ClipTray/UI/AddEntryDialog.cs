@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -118,7 +119,18 @@ namespace ClipTray.UI
             };
 
             _entries.Add(entry);
-            FileWriter.Write(_filePath, _entries);
+
+            try
+            {
+                FileWriter.Write(_filePath, _entries);
+            }
+            catch (IOException ex)
+            {
+                _entries.Remove(entry);
+                MessageBox.Show("Could not save entry:\n" + ex.Message,
+                    "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             EntryAdded?.Invoke(this, EventArgs.Empty);
 

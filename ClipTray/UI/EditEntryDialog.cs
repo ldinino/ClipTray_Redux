@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -91,9 +92,25 @@ namespace ClipTray.UI
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
+            var oldTitle = _entry.Title;
+            var oldText = _entry.Text;
+
             _entry.Title = _titleBox.Text.Trim();
             _entry.Text = _textBox.Text;
-            FileWriter.Write(_filePath, _entries);
+
+            try
+            {
+                FileWriter.Write(_filePath, _entries);
+            }
+            catch (IOException ex)
+            {
+                _entry.Title = oldTitle;
+                _entry.Text = oldText;
+                MessageBox.Show("Could not save file:\n" + ex.Message,
+                    "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             DialogResult = DialogResult.OK;
             Close();
         }

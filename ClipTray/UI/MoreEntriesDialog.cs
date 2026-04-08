@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -149,7 +150,8 @@ namespace ClipTray.UI
             var temp = _entries[idx];
             _entries[idx] = _entries[idx - 1];
             _entries[idx - 1] = temp;
-            FileWriter.Write(_filePath, _entries);
+
+            if (!SafeWrite()) { _entries[idx - 1] = _entries[idx]; _entries[idx] = temp; return; }
             RefreshListBox(idx - 1);
         }
 
@@ -161,8 +163,24 @@ namespace ClipTray.UI
             var temp = _entries[idx];
             _entries[idx] = _entries[idx + 1];
             _entries[idx + 1] = temp;
-            FileWriter.Write(_filePath, _entries);
+
+            if (!SafeWrite()) { _entries[idx + 1] = _entries[idx]; _entries[idx] = temp; return; }
             RefreshListBox(idx + 1);
+        }
+
+        private bool SafeWrite()
+        {
+            try
+            {
+                FileWriter.Write(_filePath, _entries);
+                return true;
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show("Could not save file:\n" + ex.Message,
+                    "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
         }
 
         private void EditButton_Click(object sender, EventArgs e)
@@ -193,8 +211,8 @@ namespace ClipTray.UI
 
             if (_previewMode)
             {
-                MessageBox.Show(entry.Text, entry.Title,
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                using (var dlg = new PreviewDialog(entry))
+                    dlg.ShowDialog(this);
             }
         }
     }

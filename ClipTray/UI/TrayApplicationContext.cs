@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -24,13 +25,20 @@ namespace ClipTray.UI
                 "ClipTray.txt");
 
             if (!File.Exists(_filePath))
-                FileParser.CreateDefaultFile(_filePath);
+            {
+                try { FileParser.CreateDefaultFile(_filePath); }
+                catch (IOException ex)
+                {
+                    MessageBox.Show("Could not create default file:\n" + ex.Message,
+                        "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
 
-            _entries = FileParser.Parse(_filePath);
+            _entries = SafeParse(_filePath);
 
             _notifyIcon = new NotifyIcon
             {
-                Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
+                Icon = LoadEmbeddedIcon(),
                 Text = TruncateTooltip(Path.GetFileName(_filePath)),
                 Visible = true,
                 ContextMenuStrip = BuildMenu()
@@ -41,7 +49,7 @@ namespace ClipTray.UI
 
         public void RefreshMenu()
         {
-            _entries = FileParser.Parse(_filePath);
+            _entries = SafeParse(_filePath);
             _notifyIcon.ContextMenuStrip = BuildMenu();
             _notifyIcon.Text = TruncateTooltip(Path.GetFileName(_filePath));
         }
@@ -148,6 +156,13 @@ namespace ClipTray.UI
             catch (System.Runtime.InteropServices.ExternalException)
             {
                 // Clipboard locked by another process — silently ignore
+                return;
+            }
+
+            if (_previewMode)
+            {
+                using (var dlg = new PreviewDialog(entry))
+                    dlg.ShowDialog();
             }
         }
 
@@ -198,7 +213,13 @@ namespace ClipTray.UI
                     if (result != DialogResult.Yes)
                         return;
 
-                    FileParser.CreateDefaultFile(newPath);
+                    try { FileParser.CreateDefaultFile(newPath); }
+                    catch (IOException ex)
+                    {
+                        MessageBox.Show("Could not create file:\n" + ex.Message,
+                            "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                 }
 
                 _recentFilePath = _filePath;
@@ -230,7 +251,8 @@ namespace ClipTray.UI
 
         private void AboutItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 5
+            using (var dlg = new AboutDialog())
+                dlg.ShowDialog();
         }
 
         private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
@@ -252,6 +274,29 @@ namespace ClipTray.UI
                 _notifyIcon.Dispose();
             }
             base.Dispose(disposing);
+        }
+
+        private static Icon LoadEmbeddedIcon()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            var stream = asm.GetManifestResourceStream("ClipTray.Resources.ClipTray.ico");
+            if (stream != null)
+                return new Icon(stream);
+            return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        }
+
+        private List<ClipEntry> SafeParse(string filePath)
+        {
+            try
+            {
+                return FileParser.Parse(filePath);
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show("Could not read file:\n" + ex.Message,
+                    "ClipTray", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return new List<ClipEntry>();
+            }
         }
 
         private static string TruncateTooltip(string text)
