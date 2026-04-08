@@ -177,17 +177,55 @@ namespace ClipTray.UI
 
         private void OpenCreateItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 4
+            using (var dlg = new OpenFileDialog())
+            {
+                dlg.Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
+                dlg.CheckFileExists = false;
+
+                if (dlg.ShowDialog() != DialogResult.OK)
+                    return;
+
+                var newPath = dlg.FileName;
+
+                if (!File.Exists(newPath))
+                {
+                    var result = MessageBox.Show(
+                        "\"" + Path.GetFileName(newPath) + "\" does not exist. Do you wish to create it?",
+                        "Create File",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result != DialogResult.Yes)
+                        return;
+
+                    FileParser.CreateDefaultFile(newPath);
+                }
+
+                _recentFilePath = _filePath;
+                _filePath = newPath;
+                RefreshMenu();
+            }
         }
 
         private void RecentItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 4
+            if (string.IsNullOrEmpty(_recentFilePath))
+                return;
+
+            var temp = _filePath;
+            _filePath = _recentFilePath;
+            _recentFilePath = temp;
+            RefreshMenu();
         }
 
         private void MoreItem_Click(object sender, EventArgs e)
         {
-            // Placeholder — wired in Phase 4
+            using (var dlg = new MoreEntriesDialog(_entries, _filePath, _menuSize, _previewMode))
+            {
+                dlg.ShowDialog();
+                _menuSize = dlg.MenuSize;
+            }
+            RefreshMenu();
         }
 
         private void AboutItem_Click(object sender, EventArgs e)
