@@ -70,7 +70,7 @@ namespace ClipTray.UI
             _addButton = new Button
             {
                 Text = "Add",
-                Location = new Point(135, 270),
+                Location = new Point(54, 270),
                 Size = new Size(75, 28),
                 Enabled = false
             };
@@ -79,7 +79,7 @@ namespace ClipTray.UI
             var pasteButton = new Button
             {
                 Text = "Paste",
-                Location = new Point(216, 270),
+                Location = new Point(135, 270),
                 Size = new Size(75, 28)
             };
             pasteButton.Click += (s, e) =>
@@ -91,6 +91,14 @@ namespace ClipTray.UI
                 }
                 catch (System.Runtime.InteropServices.ExternalException) { }
             };
+
+            var insertButton = new Button
+            {
+                Text = "Insert ▾",
+                Location = new Point(216, 270),
+                Size = new Size(75, 28)
+            };
+            TokenInsertMenu.AttachTo(insertButton, _textBox, this);
 
             var cancelButton = new Button
             {
@@ -106,7 +114,7 @@ namespace ClipTray.UI
             Controls.AddRange(new Control[]
             {
                 titleLabel, _titleBox, textLabel, _textBox,
-                _addButton, pasteButton, cancelButton
+                _addButton, pasteButton, insertButton, cancelButton
             });
         }
 

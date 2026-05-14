@@ -1,19 +1,18 @@
 using System.Drawing;
 using System.Windows.Forms;
-using ClipTray.Models;
 
 namespace ClipTray.UI
 {
     public class PreviewDialog : Form
     {
-        public PreviewDialog(ClipEntry entry)
+        public PreviewDialog(string title, string text)
         {
-            InitializeComponents(entry);
+            InitializeComponents(title, text);
         }
 
-        private void InitializeComponents(ClipEntry entry)
+        private void InitializeComponents(string title, string text)
         {
-            Text = entry.Title;
+            Text = title;
             Size = new Size(400, 300);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -22,7 +21,7 @@ namespace ClipTray.UI
 
             var textBox = new TextBox
             {
-                Text = entry.Text,
+                Text = text,
                 Location = new Point(12, 12),
                 Size = new Size(360, 200),
                 Multiline = true,

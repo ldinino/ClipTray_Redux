@@ -24,11 +24,27 @@ On first launch, ClipTray creates a default `ClipTray.txt` file in the same dire
 - **Copy entries** — Right-click the tray icon and click any entry to copy it to the clipboard.
 - **Add entries** — Use "Add..." from the menu, or double-click the tray icon.
 - **Edit & delete entries** — Options > Edit... opens the ClipTray Editor.
+- **Dynamic tokens** — Embed placeholders like `{date:yyyy-MM-dd}`, `{time:h:mm tt}`, `{datetime}`, or `{clipboard}` in any entry. They're resolved at paste time, so a single entry can produce fresh content. The composer's **Insert ▾** button makes it easy to add tokens without remembering the syntax.
 - **Reorder entries** — The "More..." dialog lets you move entries up and down.
 - **Menu size** — Control how many entries appear in the tray menu (the rest are accessible via "More...").
 - **Preview mode** — Toggle Options > Preview Mode to see a confirmation dialog each time you copy an entry.
 - **Multiple files** — Open or create different `.txt` files via Options > File > Open/Create. The most recent file is saved for quick switching.
 - **Single instance** — Only one copy of ClipTray runs at a time.
+
+## Tokens
+
+Any entry text can include placeholders that are substituted at paste time:
+
+| Token | Result |
+|---|---|
+| `{date}` | Current date (`MM/dd/yyyy`) |
+| `{date:yyyy-MM-dd}` | Current date with a custom [.NET DateTime format](https://learn.microsoft.com/dotnet/standard/base-types/custom-date-and-time-format-strings) |
+| `{time}` | Current time (`HH:mm:ss`) |
+| `{time:h:mm tt}` | Current time with a custom format |
+| `{datetime}` | Current date + time |
+| `{clipboard}` | Whatever text is currently on the clipboard |
+
+To insert a literal brace in your text, double it: `{{` → `{` and `}}` → `}`. Unknown tokens (e.g. `{foo}`) pass through unchanged, so JSON and code snippets are safe.
 
 ## File Format
 

@@ -67,10 +67,18 @@ namespace ClipTray.UI
             var saveButton = new Button
             {
                 Text = "Save",
-                Location = new Point(216, 270),
+                Location = new Point(135, 270),
                 Size = new Size(75, 28)
             };
             saveButton.Click += SaveButton_Click;
+
+            var insertButton = new Button
+            {
+                Text = "Insert ▾",
+                Location = new Point(216, 270),
+                Size = new Size(75, 28)
+            };
+            TokenInsertMenu.AttachTo(insertButton, _textBox, this);
 
             var cancelButton = new Button
             {
@@ -86,7 +94,7 @@ namespace ClipTray.UI
             Controls.AddRange(new Control[]
             {
                 titleLabel, _titleBox, textLabel, _textBox,
-                saveButton, cancelButton
+                saveButton, insertButton, cancelButton
             });
         }
 

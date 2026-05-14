@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
+using ClipTray.Tokens;
 
 namespace ClipTray.UI
 {
@@ -200,9 +201,11 @@ namespace ClipTray.UI
             var entry = _entries[idx];
             if (string.IsNullOrEmpty(entry.Text)) return;
 
+            var resolved = TokenSubstitution.Resolve(entry.Text);
+
             try
             {
-                Clipboard.SetText(entry.Text);
+                Clipboard.SetText(resolved);
             }
             catch (System.Runtime.InteropServices.ExternalException)
             {
@@ -211,7 +214,7 @@ namespace ClipTray.UI
 
             if (_previewMode)
             {
-                using (var dlg = new PreviewDialog(entry))
+                using (var dlg = new PreviewDialog(entry.Title, resolved))
                     dlg.ShowDialog(this);
             }
         }
