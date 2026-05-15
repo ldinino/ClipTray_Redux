@@ -4,5 +4,5 @@ using System.Reflection;
 [assembly: AssemblyDescription("System tray clipboard manager")]
 [assembly: AssemblyProduct("ClipTray")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]

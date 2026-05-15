@@ -223,5 +223,64 @@ namespace ClipTray.Tests
             Assert.AreEqual(1, entries.Count);
             Assert.AreEqual("Line one", entries[0].Text);
         }
+
+        [TestMethod]
+        public void Parse_EntryWithRtfLines_PopulatesRtfField()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Rich",
+                "Plain fallback",
+                @"Rtf:{\rtf1\ansi",
+                @"Rtf:{\fonttbl{\f0 Calibri;}}",
+                @"Rtf:\b Hello\b0 \par}",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Rich", entries[0].Title);
+            Assert.AreEqual("Plain fallback", entries[0].Text);
+            Assert.AreEqual(
+                "{\\rtf1\\ansi\r\n{\\fonttbl{\\f0 Calibri;}}\r\n\\b Hello\\b0 \\par}",
+                entries[0].Rtf);
+        }
+
+        [TestMethod]
+        public void Parse_OldFormatNoRtf_RtfIsNull()
+        {
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Plain",
+                "Just text",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.IsNull(entries[0].Rtf);
+        }
+
+        [TestMethod]
+        public void Parse_RtfLineContainsEndSubstring_DoesNotTerminateEarly()
+        {
+            // An Rtf:-prefixed line containing the substring "End:" must not
+            // terminate the entry — only a standalone "End:" line does.
+            var lines = new[]
+            {
+                "End:",
+                "",
+                "Title:Tricky",
+                "Body",
+                @"Rtf:{\rtf1 contains End: substring inside\par}",
+                "End:"
+            };
+            var entries = FileParser.ParseLines(lines);
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Tricky", entries[0].Title);
+            Assert.AreEqual(@"{\rtf1 contains End: substring inside\par}", entries[0].Rtf);
+        }
     }
 }

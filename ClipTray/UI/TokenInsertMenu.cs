@@ -48,7 +48,7 @@ namespace ClipTray.UI
             "Escape literal braces with {{ and }}.\r\n" +
             "Unknown tokens pass through unchanged.";
 
-        public static void AttachTo(Button insertButton, TextBox target, IWin32Window owner)
+        public static void AttachTo(Button insertButton, TextBoxBase target, IWin32Window owner)
         {
             var menu = new ContextMenuStrip();
 
@@ -79,7 +79,7 @@ namespace ClipTray.UI
         }
 
         private static void InsertDateTimeToken(string name, string defaultFormat, string[] presets,
-            TextBox target, IWin32Window owner)
+            TextBoxBase target, IWin32Window owner)
         {
             using (var dlg = new TokenFormatDialog(name, defaultFormat, presets))
             {
@@ -95,7 +95,7 @@ namespace ClipTray.UI
             }
         }
 
-        private static void InsertAtCaret(TextBox target, string text)
+        private static void InsertAtCaret(TextBoxBase target, string text)
         {
             int start = target.SelectionStart;
             int len = target.SelectionLength;

@@ -13,7 +13,7 @@ namespace ClipTray.UI
         private readonly List<ClipEntry> _entries;
         private readonly string _filePath;
         private TextBox _titleBox;
-        private TextBox _textBox;
+        private RichTextBox _textBox;
         private Button _addButton;
 
         public event EventHandler EntryAdded;
@@ -28,7 +28,7 @@ namespace ClipTray.UI
         private void InitializeComponents()
         {
             Text = "Add New ClipTray Entry";
-            Size = new Size(400, 350);
+            Size = new Size(440, 400);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -44,7 +44,7 @@ namespace ClipTray.UI
             _titleBox = new TextBox
             {
                 Location = new Point(12, 35),
-                Size = new Size(360, 20)
+                Size = new Size(400, 20)
             };
             _titleBox.TextChanged += (s, e) =>
             {
@@ -58,19 +58,26 @@ namespace ClipTray.UI
                 AutoSize = true
             };
 
-            _textBox = new TextBox
+            _textBox = new ComposerRichTextBox
             {
                 Location = new Point(12, 85),
-                Size = new Size(360, 170),
+                Size = new Size(400, 170),
                 Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
-                AcceptsReturn = true
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                AcceptsTab = false,
+                DetectUrls = true
+            };
+
+            var toolbar = new RichTextToolbar(_textBox)
+            {
+                Location = new Point(12, 260),
+                Size = new Size(400, 28)
             };
 
             _addButton = new Button
             {
                 Text = "Add",
-                Location = new Point(54, 270),
+                Location = new Point(94, 325),
                 Size = new Size(75, 28),
                 Enabled = false
             };
@@ -79,23 +86,18 @@ namespace ClipTray.UI
             var pasteButton = new Button
             {
                 Text = "Paste",
-                Location = new Point(135, 270),
+                Location = new Point(175, 325),
                 Size = new Size(75, 28)
             };
             pasteButton.Click += (s, e) =>
             {
-                try
-                {
-                    if (Clipboard.ContainsText())
-                        _textBox.Text = Clipboard.GetText();
-                }
-                catch (System.Runtime.InteropServices.ExternalException) { }
+                RichTextHelpers.PasteRichOrPlain(_textBox);
             };
 
             var insertButton = new Button
             {
                 Text = "Insert ▾",
-                Location = new Point(216, 270),
+                Location = new Point(256, 325),
                 Size = new Size(75, 28)
             };
             TokenInsertMenu.AttachTo(insertButton, _textBox, this);
@@ -103,7 +105,7 @@ namespace ClipTray.UI
             var cancelButton = new Button
             {
                 Text = "Cancel",
-                Location = new Point(297, 270),
+                Location = new Point(337, 325),
                 Size = new Size(75, 28),
                 DialogResult = DialogResult.Cancel
             };
@@ -113,7 +115,7 @@ namespace ClipTray.UI
 
             Controls.AddRange(new Control[]
             {
-                titleLabel, _titleBox, textLabel, _textBox,
+                titleLabel, _titleBox, textLabel, _textBox, toolbar,
                 _addButton, pasteButton, insertButton, cancelButton
             });
         }
@@ -123,7 +125,8 @@ namespace ClipTray.UI
             var entry = new ClipEntry
             {
                 Title = _titleBox.Text.Trim(),
-                Text = _textBox.Text
+                Text = _textBox.Text,
+                Rtf = RichTextHelpers.DetectRichness(_textBox)
             };
 
             _entries.Add(entry);

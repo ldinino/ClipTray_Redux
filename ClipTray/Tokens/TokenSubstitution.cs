@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -15,7 +16,24 @@ namespace ClipTray.Tokens
             @"\{\{|\}\}|\{(?<name>\w+)(?::(?<fmt>[^}]*))?\}",
             RegexOptions.Compiled);
 
+        // In RTF, literal { and } are escaped as \{ and \}. The format segment
+        // can't contain a backslash (would itself be RTF-escaped); this covers
+        // the common case of simple format strings like MM/dd/yyyy.
+        private static readonly Regex RtfTokenRegex = new Regex(
+            @"\\\{\\\{|\\\}\\\}|\\\{(?<name>\w+)(?::(?<fmt>[^\\]*))?\\\}",
+            RegexOptions.Compiled);
+
         public static string Resolve(string template)
+        {
+            return ResolveCore(template, TokenRegex, literalOpen: "{", literalClose: "}", escapeValue: null);
+        }
+
+        public static string ResolveRtf(string rtfTemplate)
+        {
+            return ResolveCore(rtfTemplate, RtfTokenRegex, literalOpen: @"\{", literalClose: @"\}", escapeValue: EscapeForRtf);
+        }
+
+        private static string ResolveCore(string template, Regex regex, string literalOpen, string literalClose, Func<string, string> escapeValue)
         {
             if (string.IsNullOrEmpty(template))
                 return template;
@@ -23,27 +41,34 @@ namespace ClipTray.Tokens
             var now = DateTime.Now;
             var clipboardText = ReadClipboardText();
 
-            return TokenRegex.Replace(template, m =>
+            return regex.Replace(template, m =>
             {
-                if (m.Value == "{{") return "{";
-                if (m.Value == "}}") return "}";
+                if (m.Value == literalOpen + literalOpen) return literalOpen;
+                if (m.Value == literalClose + literalClose) return literalClose;
 
                 var name = m.Groups["name"].Value.ToLowerInvariant();
                 var fmt = m.Groups["fmt"].Success ? m.Groups["fmt"].Value : null;
 
+                string resolved;
                 switch (name)
                 {
                     case "date":
-                        return FormatDateTime(now, fmt, DefaultDateFormat);
+                        resolved = FormatDateTime(now, fmt, DefaultDateFormat);
+                        break;
                     case "time":
-                        return FormatDateTime(now, fmt, DefaultTimeFormat);
+                        resolved = FormatDateTime(now, fmt, DefaultTimeFormat);
+                        break;
                     case "datetime":
-                        return FormatDateTime(now, fmt, DefaultDateTimeFormat);
+                        resolved = FormatDateTime(now, fmt, DefaultDateTimeFormat);
+                        break;
                     case "clipboard":
-                        return clipboardText;
+                        resolved = clipboardText;
+                        break;
                     default:
                         return m.Value;
                 }
+
+                return escapeValue != null ? escapeValue(resolved) : resolved;
             });
         }
 
@@ -72,6 +97,28 @@ namespace ClipTray.Tokens
             {
                 return string.Empty;
             }
+        }
+
+        // Escape a resolved string for safe inclusion in an RTF stream:
+        // backslash/braces are RTF metachars; chars above ASCII need \uN? escapes.
+        private static string EscapeForRtf(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return value;
+
+            var sb = new StringBuilder(value.Length);
+            foreach (var c in value)
+            {
+                if (c == '\\') sb.Append(@"\\");
+                else if (c == '{') sb.Append(@"\{");
+                else if (c == '}') sb.Append(@"\}");
+                else if (c == '\r') { /* drop CR; \par handles line breaks */ }
+                else if (c == '\n') sb.Append(@"\line ");
+                else if (c == '\t') sb.Append(@"\tab ");
+                else if (c < 128) sb.Append(c);
+                else sb.Append(@"\u").Append((short)c).Append('?');
+            }
+            return sb.ToString();
         }
     }
 }

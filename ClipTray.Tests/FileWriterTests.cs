@@ -155,5 +155,89 @@ namespace ClipTray.Tests
                 File.Delete(path);
             }
         }
+
+        [TestMethod]
+        public void Write_NullRtf_OmitsRtfMarker()
+        {
+            // Plain entries must serialize byte-identically to v1.1.0.
+            var path = Path.GetTempFileName();
+            try
+            {
+                var entries = new List<ClipEntry>
+                {
+                    new ClipEntry { Title = "Plain", Text = "Hello", Rtf = null }
+                };
+                FileWriter.Write(path, entries);
+                var content = File.ReadAllText(path);
+                Assert.AreEqual("End:\r\n\r\nTitle:Plain\r\nHello\r\nEnd:\r\n\r\n", content);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Write_EntryWithRtf_EmitsRtfMarkerLines()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                var entries = new List<ClipEntry>
+                {
+                    new ClipEntry
+                    {
+                        Title = "Rich",
+                        Text = "Hello",
+                        Rtf = "{\\rtf1\r\n\\b Hello\\b0\r\n\\par}"
+                    }
+                };
+                FileWriter.Write(path, entries);
+                var content = File.ReadAllText(path);
+                var expected =
+                    "End:\r\n\r\n" +
+                    "Title:Rich\r\n" +
+                    "Hello\r\n" +
+                    "Rtf:{\\rtf1\r\n" +
+                    "Rtf:\\b Hello\\b0\r\n" +
+                    "Rtf:\\par}\r\n" +
+                    "End:\r\n\r\n";
+                Assert.AreEqual(expected, content);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void RoundTrip_RichEntry_RtfPreserved()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                var original = new List<ClipEntry>
+                {
+                    new ClipEntry
+                    {
+                        Title = "Rich",
+                        Text = "Hello world",
+                        Rtf = "{\\rtf1\\ansi\r\n{\\fonttbl{\\f0 Calibri;}}\r\n\\b Hello\\b0  world\\par}"
+                    },
+                    new ClipEntry { Title = "Plain", Text = "Plain entry", Rtf = null }
+                };
+                FileWriter.Write(path, original);
+                var parsed = FileParser.Parse(path);
+
+                Assert.AreEqual(original.Count, parsed.Count);
+                Assert.AreEqual(original[0].Rtf, parsed[0].Rtf);
+                Assert.IsNull(parsed[1].Rtf);
+                Assert.AreEqual(original[1].Text, parsed[1].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
     }
 }

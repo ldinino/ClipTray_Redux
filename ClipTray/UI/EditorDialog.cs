@@ -13,7 +13,7 @@ namespace ClipTray.UI
         private readonly List<ClipEntry> _entries;
         private readonly string _filePath;
         private ComboBox _comboBox;
-        private TextBox _textBox;
+        private RichTextBox _textBox;
         private Button _deleteButton;
         private Button _editButton;
 
@@ -56,14 +56,16 @@ namespace ClipTray.UI
                 AutoSize = true
             };
 
-            _textBox = new TextBox
+            _textBox = new RichTextBox
             {
                 Location = new Point(12, 85),
                 Size = new Size(410, 200),
                 Multiline = true,
                 ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                DetectUrls = true
             };
+            _textBox.LinkClicked += RichTextHelpers.LaunchClickedLink;
 
             _deleteButton = new Button
             {
@@ -121,9 +123,17 @@ namespace ClipTray.UI
         private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_comboBox.SelectedIndex >= 0 && _comboBox.SelectedIndex < _entries.Count)
-                _textBox.Text = _entries[_comboBox.SelectedIndex].Text;
+            {
+                var entry = _entries[_comboBox.SelectedIndex];
+                if (!string.IsNullOrEmpty(entry.Rtf))
+                    _textBox.Rtf = entry.Rtf;
+                else
+                    _textBox.Text = entry.Text ?? "";
+            }
             else
+            {
                 _textBox.Clear();
+            }
 
             UpdateButtonState();
         }

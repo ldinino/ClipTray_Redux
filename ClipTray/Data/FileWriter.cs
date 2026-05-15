@@ -24,6 +24,15 @@ namespace ClipTray.Data
                     sb.Append(entry.Text);
                     sb.Append("\r\n");
                 }
+                if (!string.IsNullOrEmpty(entry.Rtf))
+                {
+                    foreach (var line in entry.Rtf.Split(new[] { "\r\n" }, System.StringSplitOptions.None))
+                    {
+                        sb.Append("Rtf:");
+                        sb.Append(line);
+                        sb.Append("\r\n");
+                    }
+                }
                 sb.Append("End:\r\n\r\n");
             }
 

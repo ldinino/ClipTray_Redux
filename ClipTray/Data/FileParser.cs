@@ -7,6 +7,7 @@ namespace ClipTray.Data
     public static class FileParser
     {
         private const string TitlePrefix = "Title:";
+        private const string RtfPrefix = "Rtf:";
         private const string EndMarker = "End:";
 
         public static List<ClipEntry> Parse(string filePath)
@@ -24,6 +25,7 @@ namespace ClipTray.Data
             var entries = new List<ClipEntry>();
             string currentTitle = null;
             var bodyLines = new List<string>();
+            var rtfLines = new List<string>();
             bool inBody = false;
 
             foreach (var line in lines)
@@ -33,6 +35,7 @@ namespace ClipTray.Data
                     // Title: while InBody → discard incomplete entry, start new one
                     currentTitle = line.Substring(TitlePrefix.Length);
                     bodyLines.Clear();
+                    rtfLines.Clear();
                     inBody = true;
                 }
                 else if (line == EndMarker)
@@ -46,13 +49,19 @@ namespace ClipTray.Data
                         entries.Add(new ClipEntry
                         {
                             Title = currentTitle,
-                            Text = string.Join("\r\n", bodyLines)
+                            Text = string.Join("\r\n", bodyLines),
+                            Rtf = rtfLines.Count > 0 ? string.Join("\r\n", rtfLines) : null
                         });
                     }
                     // Reset state (handles preamble End: as no-op too)
                     currentTitle = null;
                     bodyLines.Clear();
+                    rtfLines.Clear();
                     inBody = false;
+                }
+                else if (inBody && line.StartsWith(RtfPrefix))
+                {
+                    rtfLines.Add(line.Substring(RtfPrefix.Length));
                 }
                 else if (inBody)
                 {

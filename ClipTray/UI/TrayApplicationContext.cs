@@ -150,11 +150,23 @@ namespace ClipTray.UI
             if (string.IsNullOrEmpty(entry.Text))
                 return;
 
-            var resolved = TokenSubstitution.Resolve(entry.Text);
+            var resolvedText = TokenSubstitution.Resolve(entry.Text);
+            string resolvedRtf = null;
 
             try
             {
-                Clipboard.SetText(resolved);
+                if (!string.IsNullOrEmpty(entry.Rtf))
+                {
+                    resolvedRtf = TokenSubstitution.ResolveRtf(entry.Rtf);
+                    var data = new DataObject();
+                    data.SetData(DataFormats.Rtf, resolvedRtf);
+                    data.SetData(DataFormats.UnicodeText, resolvedText);
+                    Clipboard.SetDataObject(data, true);
+                }
+                else
+                {
+                    Clipboard.SetText(resolvedText);
+                }
             }
             catch (System.Runtime.InteropServices.ExternalException)
             {
@@ -164,7 +176,7 @@ namespace ClipTray.UI
 
             if (_previewMode)
             {
-                using (var dlg = new PreviewDialog(entry.Title, resolved))
+                using (var dlg = new PreviewDialog(entry.Title, resolvedText, resolvedRtf))
                     dlg.ShowDialog();
             }
         }

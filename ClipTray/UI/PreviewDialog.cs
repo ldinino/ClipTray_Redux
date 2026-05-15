@@ -5,12 +5,12 @@ namespace ClipTray.UI
 {
     public class PreviewDialog : Form
     {
-        public PreviewDialog(string title, string text)
+        public PreviewDialog(string title, string text, string rtf = null)
         {
-            InitializeComponents(title, text);
+            InitializeComponents(title, text, rtf);
         }
 
-        private void InitializeComponents(string title, string text)
+        private void InitializeComponents(string title, string text, string rtf)
         {
             Text = title;
             Size = new Size(400, 300);
@@ -19,15 +19,20 @@ namespace ClipTray.UI
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
 
-            var textBox = new TextBox
+            var textBox = new RichTextBox
             {
-                Text = text,
                 Location = new Point(12, 12),
                 Size = new Size(360, 200),
                 Multiline = true,
                 ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                DetectUrls = true
             };
+            textBox.LinkClicked += RichTextHelpers.LaunchClickedLink;
+            if (!string.IsNullOrEmpty(rtf))
+                textBox.Rtf = rtf;
+            else
+                textBox.Text = text ?? "";
 
             var okButton = new Button
             {
