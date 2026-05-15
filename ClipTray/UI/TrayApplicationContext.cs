@@ -17,7 +17,6 @@ namespace ClipTray.UI
         private string _recentFilePath;
         private List<ClipEntry> _entries;
         private int _menuSize = 20;
-        private bool _previewMode = false;
 
         public TrayApplicationContext()
         {
@@ -67,22 +66,10 @@ namespace ClipTray.UI
             // Options submenu
             var optionsMenu = new ToolStripMenuItem("Options");
 
-            // Options > Preview Mode
-            var previewItem = new ToolStripMenuItem("Preview Mode");
-            previewItem.CheckOnClick = true;
-            previewItem.Checked = _previewMode;
-            previewItem.Click += (s, e) => { _previewMode = ((ToolStripMenuItem)s).Checked; };
-            optionsMenu.DropDownItems.Add(previewItem);
-
-            // Options > Edit...
-            var editItem = new ToolStripMenuItem("Edit...");
-            editItem.Click += EditItem_Click;
-            optionsMenu.DropDownItems.Add(editItem);
-
             // Options > File submenu
             var fileMenu = new ToolStripMenuItem("File");
 
-            var openCreateItem = new ToolStripMenuItem("Open/Create...");
+            var openCreateItem = new ToolStripMenuItem("Open...");
             openCreateItem.Click += OpenCreateItem_Click;
             fileMenu.DropDownItems.Add(openCreateItem);
 
@@ -97,7 +84,7 @@ namespace ClipTray.UI
 
             // Options > Help submenu
             var helpMenu = new ToolStripMenuItem("Help");
-            var aboutItem = new ToolStripMenuItem("About ClipTray");
+            var aboutItem = new ToolStripMenuItem("About");
             aboutItem.Click += AboutItem_Click;
             helpMenu.DropDownItems.Add(aboutItem);
             optionsMenu.DropDownItems.Add(helpMenu);
@@ -108,9 +95,9 @@ namespace ClipTray.UI
             menu.Items.Add(new ToolStripSeparator());
 
             // More...
-            var moreItem = new ToolStripMenuItem("More...");
-            moreItem.Click += MoreItem_Click;
-            menu.Items.Add(moreItem);
+            var entriesItem = new ToolStripMenuItem("Entries...");
+            entriesItem.Click += EntriesItem_Click;
+            menu.Items.Add(entriesItem);
 
             // --- separator ---
             menu.Items.Add(new ToolStripSeparator());
@@ -131,7 +118,7 @@ namespace ClipTray.UI
             menu.Items.Add(new ToolStripSeparator());
 
             // Exit ClipTray
-            var exitItem = new ToolStripMenuItem("Exit ClipTray");
+            var exitItem = new ToolStripMenuItem("Exit");
             exitItem.Click += ExitItem_Click;
             menu.Items.Add(exitItem);
 
@@ -151,13 +138,12 @@ namespace ClipTray.UI
                 return;
 
             var resolvedText = TokenSubstitution.Resolve(entry.Text);
-            string resolvedRtf = null;
 
             try
             {
                 if (!string.IsNullOrEmpty(entry.Rtf))
                 {
-                    resolvedRtf = TokenSubstitution.ResolveRtf(entry.Rtf);
+                    var resolvedRtf = TokenSubstitution.ResolveRtf(entry.Rtf);
                     var data = new DataObject();
                     data.SetData(DataFormats.Rtf, resolvedRtf);
                     data.SetData(DataFormats.UnicodeText, resolvedText);
@@ -171,13 +157,6 @@ namespace ClipTray.UI
             catch (System.Runtime.InteropServices.ExternalException)
             {
                 // Clipboard locked by another process — silently ignore
-                return;
-            }
-
-            if (_previewMode)
-            {
-                using (var dlg = new PreviewDialog(entry.Title, resolvedText, resolvedRtf))
-                    dlg.ShowDialog();
             }
         }
 
@@ -194,15 +173,6 @@ namespace ClipTray.UI
         private void AddItem_Click(object sender, EventArgs e)
         {
             ShowAddDialog();
-        }
-
-        private void EditItem_Click(object sender, EventArgs e)
-        {
-            using (var dlg = new EditorDialog(_entries, _filePath))
-            {
-                dlg.ShowDialog();
-            }
-            RefreshMenu();
         }
 
         private void OpenCreateItem_Click(object sender, EventArgs e)
@@ -254,9 +224,9 @@ namespace ClipTray.UI
             RefreshMenu();
         }
 
-        private void MoreItem_Click(object sender, EventArgs e)
+        private void EntriesItem_Click(object sender, EventArgs e)
         {
-            using (var dlg = new MoreEntriesDialog(_entries, _filePath, _menuSize, _previewMode))
+            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize))
             {
                 dlg.ShowDialog();
                 _menuSize = dlg.MenuSize;

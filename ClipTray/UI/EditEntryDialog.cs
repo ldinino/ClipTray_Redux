@@ -26,7 +26,7 @@ namespace ClipTray.UI
 
         private void InitializeComponents()
         {
-            Text = "Edit - \"" + _entry.Title + "\"";
+            Text = "Edit Entry — " + _entry.Title;
             Size = new Size(440, 400);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -35,7 +35,7 @@ namespace ClipTray.UI
 
             var titleLabel = new Label
             {
-                Text = "Name of ClipTray Entry:",
+                Text = "Name:",
                 Location = new Point(12, 15),
                 AutoSize = true
             };

@@ -27,7 +27,7 @@ namespace ClipTray.UI
 
         private void InitializeComponents()
         {
-            Text = "Add New ClipTray Entry";
+            Text = "New Entry";
             Size = new Size(440, 400);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -36,7 +36,7 @@ namespace ClipTray.UI
 
             var titleLabel = new Label
             {
-                Text = "Name of ClipTray Entry:",
+                Text = "Name:",
                 Location = new Point(12, 15),
                 AutoSize = true
             };
@@ -53,7 +53,7 @@ namespace ClipTray.UI
 
             var textLabel = new Label
             {
-                Text = "Entry Text:",
+                Text = "Entry text:",
                 Location = new Point(12, 65),
                 AutoSize = true
             };

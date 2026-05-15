@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace ClipTray.UI
@@ -28,9 +29,10 @@ namespace ClipTray.UI
                 AutoSize = true
             };
 
+            var v = Assembly.GetExecutingAssembly().GetName().Version;
             var versionLabel = new Label
             {
-                Text = "Version 1.0.0",
+                Text = "Version " + v.Major + "." + v.Minor + "." + v.Build,
                 Location = new Point(12, 50),
                 AutoSize = true
             };

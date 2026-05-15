@@ -22,13 +22,12 @@ On first launch, ClipTray creates a default `ClipTray.txt` file in the same dire
 ## Features
 
 - **Copy entries** — Right-click the tray icon and click any entry to copy it to the clipboard.
+- **Rich text** — Compose entries with bold, italic, underline, strikethrough, font, size, text and highlight color, bullets, alignment, and hyperlinks. Pasted formatting from browsers and Word is preserved. Plain-text entries stay plain on disk.
 - **Add entries** — Use "Add..." from the menu, or double-click the tray icon.
-- **Edit & delete entries** — Options > Edit... opens the ClipTray Editor.
-- **Dynamic tokens** — Embed placeholders like `{date:yyyy-MM-dd}`, `{time:h:mm tt}`, `{datetime}`, or `{clipboard}` in any entry. They're resolved at paste time, so a single entry can produce fresh content. The composer's **Insert ▾** button makes it easy to add tokens without remembering the syntax.
-- **Reorder entries** — The "More..." dialog lets you move entries up and down.
-- **Menu size** — Control how many entries appear in the tray menu (the rest are accessible via "More...").
-- **Preview mode** — Toggle Options > Preview Mode to see a confirmation dialog each time you copy an entry.
-- **Multiple files** — Open or create different `.txt` files via Options > File > Open/Create. The most recent file is saved for quick switching.
+- **Manage entries** — The "Entries..." dialog lets you create, edit, reorder, delete, copy, or preview entries in one place.
+- **Dynamic tokens** — Embed placeholders like `{date:yyyy-MM-dd}`, `{time:h:mm tt}`, `{datetime}`, or `{clipboard}` in any entry. They're resolved at paste time, so a single entry can produce fresh content. The composer's **Insert ▾** button makes it easy to add tokens without remembering the syntax. Tokens work inside rich text too.
+- **Menu size** — Control how many entries appear in the tray menu (the rest are accessible via "Entries...").
+- **Multiple files** — Open different `.txt` files via Options > File > Open. The most recent file is saved for quick switching.
 - **Single instance** — Only one copy of ClipTray runs at a time.
 
 ## Tokens
@@ -70,6 +69,8 @@ End:
 - Each entry ends with `End:` on its own line.
 
 You can edit this file by hand if you prefer, or use the built-in editor.
+
+Entries with rich formatting also include a series of `Rtf:`-prefixed lines after the body, holding raw RTF for the formatted version. Plain-text entries omit these lines and remain byte-identical to the original ClipTray format.
 
 ## Building from Source
 
