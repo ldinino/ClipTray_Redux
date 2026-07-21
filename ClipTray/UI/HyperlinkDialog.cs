@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace ClipTray.UI
 {
-    public class HyperlinkDialog : Form
+    public class HyperlinkDialog : ClipTrayForm
     {
         private TextBox _urlBox;
         private TextBox _displayBox;
@@ -13,15 +13,22 @@ namespace ClipTray.UI
         public string DisplayText { get; private set; }
 
         public HyperlinkDialog(string defaultDisplay)
+            : this("", defaultDisplay)
         {
+        }
+
+        public HyperlinkDialog(string defaultUrl, string defaultDisplay)
+        {
+            Url = defaultUrl ?? "";
             DisplayText = defaultDisplay ?? "";
             InitializeComponents();
+            ConfigureDpiScaling();
         }
 
         private void InitializeComponents()
         {
-            Text = "Insert Hyperlink";
-            Size = new Size(420, 190);
+            Text = "Insert or Edit Link";
+            ClientSize = new Size(404, 151);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -29,13 +36,15 @@ namespace ClipTray.UI
 
             var urlLabel = new Label
             {
-                Text = "URL:",
+                Text = "Link address:",
                 Location = new Point(12, 18),
                 AutoSize = true
             };
 
             _urlBox = new TextBox
             {
+                Name = "linkAddress",
+                Text = Url,
                 Location = new Point(95, 15),
                 Size = new Size(297, 21)
             };
@@ -46,13 +55,14 @@ namespace ClipTray.UI
 
             var displayLabel = new Label
             {
-                Text = "Display text:",
+                Text = "Text to display:",
                 Location = new Point(12, 50),
                 AutoSize = true
             };
 
             _displayBox = new TextBox
             {
+                Name = "linkDisplayText",
                 Text = DisplayText,
                 Location = new Point(95, 47),
                 Size = new Size(297, 21)
@@ -72,7 +82,7 @@ namespace ClipTray.UI
                 Location = new Point(236, 112),
                 Size = new Size(75, 28),
                 DialogResult = DialogResult.OK,
-                Enabled = false
+                Enabled = !string.IsNullOrWhiteSpace(Url)
             };
             _okButton.Click += (s, e) =>
             {
@@ -90,6 +100,18 @@ namespace ClipTray.UI
 
             AcceptButton = _okButton;
             CancelButton = cancelButton;
+            Shown += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(_urlBox.Text))
+                {
+                    _urlBox.Focus();
+                }
+                else
+                {
+                    _displayBox.Focus();
+                    _displayBox.SelectAll();
+                }
+            };
 
             Controls.AddRange(new Control[]
             {

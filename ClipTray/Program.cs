@@ -12,14 +12,15 @@ namespace ClipTray
         [STAThread]
         static void Main()
         {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             bool createdNew;
             using (var mutex = new Mutex(true, MutexName, out createdNew))
             {
                 if (!createdNew)
                     return;
 
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new TrayApplicationContext());
             }
         }

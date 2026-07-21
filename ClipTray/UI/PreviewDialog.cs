@@ -3,17 +3,18 @@ using System.Windows.Forms;
 
 namespace ClipTray.UI
 {
-    public class PreviewDialog : Form
+    public class PreviewDialog : ClipTrayForm
     {
         public PreviewDialog(string title, string text, string rtf = null)
         {
             InitializeComponents(title, text, rtf);
+            ConfigureDpiScaling();
         }
 
         private void InitializeComponents(string title, string text, string rtf)
         {
             Text = title;
-            Size = new Size(400, 300);
+            ClientSize = new Size(384, 261);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;

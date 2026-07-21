@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ClipTray.Data;
 
@@ -176,6 +177,132 @@ namespace ClipTray.Tests
                 Assert.AreEqual(1, entries.Count);
                 Assert.AreEqual("FileTest", entries[0].Title);
                 Assert.AreEqual("File body", entries[0].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Parse_Windows1252LegacyFile_DecodesNonBreakingSpaces()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                const string content =
+                    "End:\r\n\r\n" +
+                    "Title:Legacy\r\n" +
+                    "Before\u00a0after • Customer’s\r\n" +
+                    "\u00a0\r\n" +
+                    "End:\r\n";
+                File.WriteAllBytes(path, Encoding.GetEncoding(1252).GetBytes(content));
+
+                var entries = FileParser.Parse(path);
+
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("Before\u00a0after • Customer’s\r\n\u00a0", entries[0].Text);
+                Assert.IsFalse(entries[0].Text.Contains("\ufffd"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Parse_Utf8WithoutBom_PreservesUnicode()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                const string content =
+                    "End:\r\n\r\n" +
+                    "Title:Modern\r\n" +
+                    "Café 😀\r\n" +
+                    "End:\r\n";
+                File.WriteAllBytes(path, new UTF8Encoding(false).GetBytes(content));
+
+                var entries = FileParser.Parse(path);
+
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("Café 😀", entries[0].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void Parse_Utf8WithBom_PreservesUnicode()
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                const string content =
+                    "End:\r\n\r\n" +
+                    "Title:Unicode\r\n" +
+                    "Résumé 日本語\r\n" +
+                    "End:\r\n";
+                File.WriteAllText(path, content, new UTF8Encoding(true));
+
+                var entries = FileParser.Parse(path);
+
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("Résumé 日本語", entries[0].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_Utf16WithBom_PreservesUnicode(bool bigEndian)
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                const string content =
+                    "End:\r\n\r\n" +
+                    "Title:Unicode\r\n" +
+                    "Résumé 日本語\r\n" +
+                    "End:\r\n";
+                File.WriteAllText(path, content, new UnicodeEncoding(bigEndian, true));
+
+                var entries = FileParser.Parse(path);
+
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("Résumé 日本語", entries[0].Text);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void Parse_Utf32WithBom_PreservesUnicode(bool bigEndian)
+        {
+            var path = Path.GetTempFileName();
+            try
+            {
+                const string content =
+                    "End:\r\n\r\n" +
+                    "Title:Unicode\r\n" +
+                    "Résumé 日本語 😀\r\n" +
+                    "End:\r\n";
+                File.WriteAllText(path, content, new UTF32Encoding(bigEndian, true));
+
+                var entries = FileParser.Parse(path);
+
+                Assert.AreEqual(1, entries.Count);
+                Assert.AreEqual("Résumé 日本語 😀", entries[0].Text);
             }
             finally
             {

@@ -319,29 +319,22 @@ namespace ClipTray.UI
 
         private void LinkBtn_Click(object sender, EventArgs e)
         {
-            string defaultDisplay = _target.SelectionLength > 0 ? _target.SelectedText : "";
-            using (var dlg = new HyperlinkDialog(defaultDisplay))
+            int selectionStart = _target.SelectionStart;
+            int selectionLength = _target.SelectionLength;
+            string defaultDisplay = RichTextHelpers.GetVisibleSelectedText(_target);
+            string defaultUrl = "";
+
+            if (!RichTextHelpers.TryGetHyperlinkUrl(_target.SelectedRtf, out defaultUrl)
+                && Uri.TryCreate(defaultDisplay.Trim(), UriKind.Absolute, out var selectedUri))
+                defaultUrl = selectedUri.AbsoluteUri;
+
+            using (var dlg = new HyperlinkDialog(defaultUrl, defaultDisplay))
             {
                 if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
                 if (string.IsNullOrEmpty(dlg.Url)) return;
 
-                var display = string.IsNullOrEmpty(dlg.DisplayText) ? dlg.Url : dlg.DisplayText;
-
-                // Capture pre-insert formatting so the user's next keystroke
-                // doesn't inherit the link's blue/underline styling.
-                var prevColor = _target.SelectionColor;
-                var prevBack = _target.SelectionBackColor;
-                var prevFont = _target.SelectionFont ?? _target.Font;
-
-                // Insert as a real RTF HYPERLINK field — same structure browsers
-                // and Word produce. Clickable in read-only previews and after
-                // copying to other apps.
-                _target.SelectedRtf = RichTextHelpers.BuildHyperlinkRtf(dlg.Url, display);
-
-                // Cursor is now after the inserted field; reset formatting.
-                _target.SelectionColor = prevColor;
-                _target.SelectionBackColor = prevBack;
-                _target.SelectionFont = prevFont;
+                _target.Select(selectionStart, selectionLength);
+                RichTextHelpers.InsertHyperlink(_target, dlg.Url, dlg.DisplayText);
             }
             _target.Focus();
         }

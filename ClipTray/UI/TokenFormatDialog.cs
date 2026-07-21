@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace ClipTray.UI
 {
-    public class TokenFormatDialog : Form
+    public class TokenFormatDialog : ClipTrayForm
     {
         private readonly string _tokenName;
         private readonly string _defaultFormat;
@@ -22,12 +22,13 @@ namespace ClipTray.UI
             Format = defaultFormat;
             InitializeComponents();
             UpdatePreview();
+            ConfigureDpiScaling();
         }
 
         private void InitializeComponents()
         {
             Text = "Insert {" + _tokenName + "}";
-            Size = new Size(380, 200);
+            ClientSize = new Size(364, 161);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;

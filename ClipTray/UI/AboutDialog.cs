@@ -5,17 +5,18 @@ using System.Windows.Forms;
 
 namespace ClipTray.UI
 {
-    public class AboutDialog : Form
+    public class AboutDialog : ClipTrayForm
     {
         public AboutDialog()
         {
             InitializeComponents();
+            ConfigureDpiScaling();
         }
 
         private void InitializeComponents()
         {
             Text = "About ClipTray";
-            Size = new Size(340, 210);
+            ClientSize = new Size(324, 171);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;

@@ -44,8 +44,8 @@ gh release create vX.Y.Z ClipTray-vX.Y.Z.zip `
 ## Packaging rules
 
 - **Always ship the `.exe` + `.exe.config` pair, zipped.** Never upload the raw exe alone.
-  - The `.config` contains the `<supportedRuntime>` block. Without it, the app works on Windows 10 1903+ / Windows 11 (where 4.8 is default) but loses the friendly "needs .NET 4.8" prompt on older systems and may bind to a different installed runtime.
-  - The SDK auto-generates `ClipTray.exe.config` during Release build — no `App.config` source file needed in the project.
+  - The `.config` contains the `<supportedRuntime>` block and the WinForms `PerMonitorV2` setting. Without it, the app loses both explicit .NET 4.8 binding and enhanced DPI handling.
+  - The SDK emits `ClipTray.exe.config` from [ClipTray/App.config](ClipTray/App.config) during the Release build.
 - **Zip name**: `ClipTray-vX.Y.Z.zip` at the repo root. Files at the zip root (no subfolder).
 - **Don't commit the zip.** `.gitignore` already excludes `*.zip`. The zip is a release artifact, not source.
 - Release config in [ClipTray/ClipTray.csproj](ClipTray/ClipTray.csproj) already strips PDBs and enables optimizations — don't disable those for a release build.

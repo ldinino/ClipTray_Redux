@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
@@ -17,6 +18,7 @@ namespace ClipTray.UI
         private string _recentFilePath;
         private List<ClipEntry> _entries;
         private int _menuSize = 20;
+        private Icon _applicationIcon;
 
         public TrayApplicationContext()
         {
@@ -36,9 +38,10 @@ namespace ClipTray.UI
 
             _entries = SafeParse(_filePath);
 
+            _applicationIcon = ClipTrayIcon.Create();
             _notifyIcon = new NotifyIcon
             {
-                Icon = LoadEmbeddedIcon(),
+                Icon = _applicationIcon,
                 Text = TruncateTooltip(Path.GetFileName(_filePath)),
                 Visible = true,
                 ContextMenuStrip = BuildMenu()
@@ -56,15 +59,29 @@ namespace ClipTray.UI
 
         private ContextMenuStrip BuildMenu()
         {
-            var menu = new ContextMenuStrip();
+            var menu = new ContextMenuStrip
+            {
+                ImageScalingSize = SystemInformation.SmallIconSize,
+                RenderMode = ToolStripRenderMode.Professional,
+                ShowCheckMargin = true
+            };
 
-            // Add...
-            var addItem = new ToolStripMenuItem("Add...");
+            var addItem = new ToolStripMenuItem("New insert...");
             addItem.Click += AddItem_Click;
             menu.Items.Add(addItem);
 
             // Options submenu
             var optionsMenu = new ToolStripMenuItem("Options");
+
+            var startWithWindowsItem = new ToolStripMenuItem("Start with Windows")
+            {
+                Name = "startWithWindowsItem",
+                Checked = ReadStartupRegistration(),
+                CheckOnClick = false
+            };
+            startWithWindowsItem.Click += StartWithWindowsItem_Click;
+            optionsMenu.DropDownItems.Add(startWithWindowsItem);
+            optionsMenu.DropDownItems.Add(new ToolStripSeparator());
 
             // Options > File submenu
             var fileMenu = new ToolStripMenuItem("File");
@@ -94,8 +111,7 @@ namespace ClipTray.UI
             // --- separator ---
             menu.Items.Add(new ToolStripSeparator());
 
-            // More...
-            var entriesItem = new ToolStripMenuItem("Entries...");
+            var entriesItem = new ToolStripMenuItem("Open editor...");
             entriesItem.Click += EntriesItem_Click;
             menu.Items.Add(entriesItem);
 
@@ -122,7 +138,27 @@ namespace ClipTray.UI
             exitItem.Click += ExitItem_Click;
             menu.Items.Add(exitItem);
 
+            ApplyMenuDpiMetrics(menu.Items);
             return menu;
+        }
+
+        private static void ApplyMenuDpiMetrics(ToolStripItemCollection items)
+        {
+            float scale = Math.Max(1F, SystemInformation.SmallIconSize.Width / 16F);
+            int verticalPadding = Math.Max(1, (int)Math.Round(1F + 4F * (scale - 1F)));
+
+            foreach (ToolStripItem item in items)
+            {
+                var menuItem = item as ToolStripMenuItem;
+                if (menuItem == null) continue;
+
+                menuItem.Padding = new Padding(
+                    0,
+                    verticalPadding,
+                    0,
+                    verticalPadding);
+                ApplyMenuDpiMetrics(menuItem.DropDownItems);
+            }
         }
 
         private void EntryItem_Click(object sender, EventArgs e)
@@ -137,16 +173,15 @@ namespace ClipTray.UI
             if (string.IsNullOrEmpty(entry.Text))
                 return;
 
-            var resolvedText = TokenSubstitution.Resolve(entry.Text);
+            var visibleText = RichTextHelpers.GetVisibleText(entry.Rtf, entry.Text);
+            var resolvedText = TokenSubstitution.Resolve(visibleText);
 
             try
             {
                 if (!string.IsNullOrEmpty(entry.Rtf))
                 {
                     var resolvedRtf = TokenSubstitution.ResolveRtf(entry.Rtf);
-                    var data = new DataObject();
-                    data.SetData(DataFormats.Rtf, resolvedRtf);
-                    data.SetData(DataFormats.UnicodeText, resolvedText);
+                    var data = RichTextHelpers.CreateClipboardData(resolvedText, resolvedRtf);
                     Clipboard.SetDataObject(data, true);
                 }
                 else
@@ -162,10 +197,10 @@ namespace ClipTray.UI
 
         private void ShowAddDialog()
         {
-            using (var dlg = new AddEntryDialog(_entries, _filePath))
+            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize, true))
             {
-                dlg.EntryAdded += (s, ev) => RefreshMenu();
                 dlg.ShowDialog();
+                _menuSize = dlg.MenuSize;
             }
             RefreshMenu();
         }
@@ -173,6 +208,25 @@ namespace ClipTray.UI
         private void AddItem_Click(object sender, EventArgs e)
         {
             ShowAddDialog();
+        }
+
+        private void StartWithWindowsItem_Click(object sender, EventArgs e)
+        {
+            var item = (ToolStripMenuItem)sender;
+            try
+            {
+                StartupRegistration.SetEnabled(!item.Checked);
+                item.Checked = StartupRegistration.IsEnabled();
+            }
+            catch (Exception ex) when (IsStartupRegistrationError(ex))
+            {
+                item.Checked = ReadStartupRegistration();
+                MessageBox.Show(
+                    "Could not update the Windows startup setting:\n" + ex.Message,
+                    "ClipTray",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private void OpenCreateItem_Click(object sender, EventArgs e)
@@ -257,13 +311,9 @@ namespace ClipTray.UI
             {
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
+                _applicationIcon.Dispose();
             }
             base.Dispose(disposing);
-        }
-
-        private static Icon LoadEmbeddedIcon()
-        {
-            return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         }
 
         private List<ClipEntry> SafeParse(string filePath)
@@ -285,6 +335,25 @@ namespace ClipTray.UI
             if (text.Length > 63)
                 return text.Substring(0, 60) + "...";
             return text;
+        }
+
+        private static bool ReadStartupRegistration()
+        {
+            try
+            {
+                return StartupRegistration.IsEnabled();
+            }
+            catch (Exception ex) when (IsStartupRegistrationError(ex))
+            {
+                return false;
+            }
+        }
+
+        private static bool IsStartupRegistrationError(Exception exception)
+        {
+            return exception is IOException
+                || exception is SecurityException
+                || exception is UnauthorizedAccessException;
         }
 
         private static string TruncateMenuTitle(string title)

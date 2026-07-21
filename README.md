@@ -22,12 +22,15 @@ On first launch, ClipTray creates a default `ClipTray.txt` file in the same dire
 ## Features
 
 - **Copy entries** — Right-click the tray icon and click any entry to copy it to the clipboard.
-- **Rich text** — Compose entries with bold, italic, underline, strikethrough, font, size, text and highlight color, bullets, alignment, and hyperlinks. Pasted formatting from browsers and Word is preserved. Plain-text entries stay plain on disk.
-- **Add entries** — Use "Add..." from the menu, or double-click the tray icon.
-- **Manage entries** — The "Entries..." dialog lets you create, edit, reorder, delete, copy, or preview entries in one place.
+- **Rich text** — Compose inserts with bold, italic, underline, strikethrough, font, size, text and highlight color, bullets, alignment, and titled hyperlinks. Pasted formatting from browsers and Word is preserved; copied links remain clickable in browser-based and native rich-text editors, with clean titles in plain-text apps. Plain-text inserts stay plain on disk.
+- **Unified editor** — Browse inserts on the left and edit the selected draft on the right. Create, duplicate, delete, copy, preview, save, or discard without bouncing between dialogs.
+- **Direct ordering** — Move the selected insert up or down from the list footer; the tray menu order updates with it.
+- **Quick capture** — Use "New insert..." from the tray menu, or double-click the tray icon, to open a fresh draft in the editor.
 - **Dynamic tokens** — Embed placeholders like `{date:yyyy-MM-dd}`, `{time:h:mm tt}`, `{datetime}`, or `{clipboard}` in any entry. They're resolved at paste time, so a single entry can produce fresh content. The composer's **Insert ▾** button makes it easy to add tokens without remembering the syntax. Tokens work inside rich text too.
-- **Menu size** — Control how many entries appear in the tray menu (the rest are accessible via "Entries...").
+- **Menu size** — Control how many inserts appear in the tray menu (the rest remain available in "Open editor...").
 - **Multiple files** — Open different `.txt` files via Options > File > Open. The most recent file is saved for quick switching.
+- **High-DPI support** — Windows scale and monitor changes use PerMonitorV2 awareness, with every ClipTray window scaling from a 96-DPI layout baseline.
+- **Start with Windows** — Enable or disable per-user startup from Options > Start with Windows. No administrator access or installer is required.
 - **Single instance** — Only one copy of ClipTray runs at a time.
 
 ## Tokens
@@ -71,6 +74,8 @@ End:
 You can edit this file by hand if you prefer, or use the built-in editor.
 
 Entries with rich formatting also include a series of `Rtf:`-prefixed lines after the body, holding raw RTF for the formatted version. Plain-text entries omit these lines and remain byte-identical to the original ClipTray format.
+
+Original ClipTray files saved as Windows ANSI (Windows-1252) are detected automatically when they are not valid UTF-8. New and updated files are written as UTF-8 without a BOM.
 
 ## Building from Source
 
