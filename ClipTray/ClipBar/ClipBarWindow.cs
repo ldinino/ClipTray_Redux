@@ -365,7 +365,7 @@ namespace ClipTray.ClipBar
             base.OnHandleCreated(e);
 
             _appliedBackdrop = WindowBackdrop.Apply(
-                this, _settings.Backdrop, _settings.Transparency, _theme.Background, _theme.IsDark);
+                this, _settings.Backdrop, _settings.Transparency, _theme.IsDark);
             _targetOpacity = WindowBackdrop.OpacityFor(_appliedBackdrop, _settings.Transparency);
             WindowBackdrop.ApplyRoundedCorners(Handle);
 

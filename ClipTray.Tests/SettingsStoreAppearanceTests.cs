@@ -32,7 +32,7 @@ namespace ClipTray.Tests
         {
             var settings = SettingsStore.Load(_path);
 
-            Assert.AreEqual(BackdropMode.Acrylic, settings.Backdrop);
+            Assert.AreEqual(BackdropMode.SystemAcrylic, settings.Backdrop);
             Assert.AreEqual(100, settings.Transparency);
             Assert.AreEqual(ThemeMode.System, settings.Theme);
         }
@@ -42,7 +42,7 @@ namespace ClipTray.Tests
         {
             var original = new AppSettings
             {
-                Backdrop = BackdropMode.Blur,
+                Backdrop = BackdropMode.Translucent,
                 Transparency = 70,
                 Theme = ThemeMode.Light
             };
@@ -50,7 +50,7 @@ namespace ClipTray.Tests
             Assert.IsTrue(SettingsStore.Save(_path, original));
             var loaded = SettingsStore.Load(_path);
 
-            Assert.AreEqual(BackdropMode.Blur, loaded.Backdrop);
+            Assert.AreEqual(BackdropMode.Translucent, loaded.Backdrop);
             Assert.AreEqual(70, loaded.Transparency);
             Assert.AreEqual(ThemeMode.Light, loaded.Theme);
         }
@@ -58,12 +58,25 @@ namespace ClipTray.Tests
         [TestMethod]
         public void EnumValues_AreCaseInsensitive()
         {
-            File.WriteAllText(_path, "[ClipBar]\r\nBackdrop=acrylic\r\nTheme=DARK\r\n");
+            File.WriteAllText(_path, "[ClipBar]\r\nBackdrop=translucent\r\nTheme=DARK\r\n");
 
             var settings = SettingsStore.Load(_path);
 
-            Assert.AreEqual(BackdropMode.Acrylic, settings.Backdrop);
+            Assert.AreEqual(BackdropMode.Translucent, settings.Backdrop);
             Assert.AreEqual(ThemeMode.Dark, settings.Theme);
+        }
+
+        [TestMethod]
+        public void RetiredBackdropValues_FallBackToTheDefault()
+        {
+            // Settings files written before Blur and Acrylic were dropped must still
+            // load, landing on the backdrop that replaced them.
+            foreach (var retired in new[] { "Blur", "Acrylic" })
+            {
+                File.WriteAllText(_path, "[ClipBar]\r\nBackdrop=" + retired + "\r\n");
+
+                Assert.AreEqual(BackdropMode.SystemAcrylic, SettingsStore.Load(_path).Backdrop, retired);
+            }
         }
 
         [TestMethod]
@@ -73,7 +86,7 @@ namespace ClipTray.Tests
 
             var settings = SettingsStore.Load(_path);
 
-            Assert.AreEqual(BackdropMode.Acrylic, settings.Backdrop);
+            Assert.AreEqual(BackdropMode.SystemAcrylic, settings.Backdrop);
             Assert.AreEqual(ThemeMode.System, settings.Theme);
         }
 
@@ -83,7 +96,7 @@ namespace ClipTray.Tests
             // Enum.TryParse happily accepts "99"; IsDefined has to reject it.
             File.WriteAllText(_path, "[ClipBar]\r\nBackdrop=99\r\n");
 
-            Assert.AreEqual(BackdropMode.Acrylic, SettingsStore.Load(_path).Backdrop);
+            Assert.AreEqual(BackdropMode.SystemAcrylic, SettingsStore.Load(_path).Backdrop);
         }
 
         [TestMethod]

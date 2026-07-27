@@ -66,7 +66,7 @@ Update the README's **Features** section in the same commit if the change is use
 Convention from existing history: imperative subject ("Add X", "Fix Y", or "Phase N: …"), body explains the *why*, trailer:
 
 ```
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 ```
 
 ## Gotchas

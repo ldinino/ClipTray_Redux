@@ -31,15 +31,16 @@ namespace ClipTray.Settings
         public HotKeyDefinition ClipBarHotKey { get; set; } = HotKeyDefinition.Default;
 
         /// <summary>
-        /// Translucency and blur treatment behind ClipBar. Acrylic via the accent API
-        /// is the default because it renders consistently; SystemAcrylic blurs more
-        /// convincingly on Windows 11 but relies on a glass client area.
+        /// Translucency treatment behind ClipBar. The Windows 11 system acrylic is the
+        /// default because it blurs without washing out the text; it degrades to plain
+        /// translucency on anything older.
         /// </summary>
-        public BackdropMode Backdrop { get; set; } = BackdropMode.Acrylic;
+        public BackdropMode Backdrop { get; set; } = BackdropMode.SystemAcrylic;
 
         /// <summary>
         /// Percent opacity, 50 to 100. Defaults to fully opaque; lower it to trade
-        /// legibility for translucency and, with a blurring backdrop, blur.
+        /// legibility for translucency. Ignored by the system acrylic backdrop, which
+        /// is composited behind an opaque window.
         /// </summary>
         public int Transparency { get; set; } = DefaultTransparency;
 

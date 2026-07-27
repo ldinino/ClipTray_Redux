@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using ClipTray.ClipBar;
@@ -41,7 +42,7 @@ namespace ClipTray.Tests
             {
                 ClipBarEnabled = true,
                 ClipBarHotKey = hotKey,
-                Backdrop = BackdropMode.Blur,
+                Backdrop = BackdropMode.Translucent,
                 Transparency = 70,
                 MaxResults = 9,
                 Theme = ThemeMode.Light
@@ -284,6 +285,30 @@ namespace ClipTray.Tests
         }
 
         [TestMethod]
+        public void Backdrop_OffersOnlyTheThreeSupportedModes()
+        {
+            // Blur and Acrylic were withdrawn; offering them again would put the
+            // accent-policy rendering bugs back in front of the user.
+            using (var dialog = NewDialog(Settings()))
+            {
+                var combo = Control<ComboBox>(dialog, "backdropCombo");
+                var offered = new List<BackdropMode>();
+                var target = new AppSettings();
+
+                for (int index = 0; index < combo.Items.Count; index++)
+                {
+                    combo.SelectedIndex = index;
+                    dialog.ApplyTo(target);
+                    offered.Add(target.Backdrop);
+                }
+
+                CollectionAssert.AreEquivalent(
+                    new[] { BackdropMode.None, BackdropMode.Translucent, BackdropMode.SystemAcrylic },
+                    offered);
+            }
+        }
+
+        [TestMethod]
         public void ApplyButton_DoesNotCloseTheDialog()
         {
             using (var dialog = NewDialog(Settings()))
@@ -316,6 +341,85 @@ namespace ClipTray.Tests
                 }
             }
             Assert.Fail("Key not offered by the dialog: " + key);
+        }
+    }
+
+    /// <summary>
+    /// Layout invariants for the settings rows. The measurements are relative - a
+    /// caption against the control beside it - so they hold at the test host's fixed
+    /// 96 DPI even though absolute sizes there mean nothing.
+    /// </summary>
+    [TestClass]
+    public class ClipBarSettingsDialogLayoutTests
+    {
+        private static ClipBarSettingsDialog LaidOut()
+        {
+            var dialog = new ClipBarSettingsDialog(new AppSettings(), definition => true);
+
+            // Realises the layout without putting the window on screen.
+            var forceHandleCreation = dialog.Handle;
+            dialog.PerformLayout();
+            return dialog;
+        }
+
+        private static TableLayoutPanel RowPanel(Control root)
+        {
+            return (TableLayoutPanel)root.Controls.Find("backdropCombo", true)[0].Parent;
+        }
+
+        [TestMethod]
+        public void EveryCaption_IsCentredOnTheControlItNames()
+        {
+            using (var dialog = LaidOut())
+            {
+                var layout = RowPanel(dialog);
+                var captions = new Dictionary<int, Control>();
+                var controls = new Dictionary<int, Control>();
+
+                foreach (Control child in layout.Controls)
+                {
+                    var cell = layout.GetPositionFromControl(child);
+                    if (cell.Column == 0 && !string.IsNullOrEmpty(child.Text)) captions[cell.Row] = child;
+                    else if (cell.Column == 1) controls[cell.Row] = child;
+                }
+
+                int compared = 0;
+                foreach (var caption in captions)
+                {
+                    Control control;
+                    if (!controls.TryGetValue(caption.Key, out control)) continue;
+
+                    Assert.IsTrue(control.Height > 0 && caption.Value.Height > 0,
+                        "Nothing was measured, so this test would pass vacuously");
+
+                    int drift = (caption.Value.Top + caption.Value.Height / 2)
+                        - (control.Top + control.Height / 2);
+                    Assert.IsTrue(Math.Abs(drift) <= 3,
+                        "'" + caption.Value.Text + "' sits " + drift
+                        + "px off the vertical centre of the control it names");
+                    compared++;
+                }
+
+                Assert.AreEqual(5, compared,
+                    "Expected a caption for Shortcut, Backdrop, Transparency, Results shown and Theme");
+            }
+        }
+
+        [TestMethod]
+        public void Rows_AreNotStretchedBeyondTheirContent()
+        {
+            // A hard-coded ClientSize left roughly 90px of dead space under the last
+            // row, and a different amount of it at every DPI.
+            using (var dialog = LaidOut())
+            {
+                var layout = RowPanel(dialog);
+                int slack = layout.Height - layout.PreferredSize.Height;
+
+                Assert.IsTrue(slack <= 4,
+                    "The settings rows are stretched " + slack + "px past their content");
+                Assert.IsTrue(dialog.AutoSize && dialog.AutoSizeMode == AutoSizeMode.GrowAndShrink,
+                    "The dialog must take its size from its contents");
+            }
         }
     }
 }

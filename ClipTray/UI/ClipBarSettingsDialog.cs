@@ -16,6 +16,13 @@ namespace ClipTray.UI
         private static readonly Color AvailableColor = Color.FromArgb(22, 120, 55);
         private static readonly Color ConflictColor = Color.FromArgb(170, 35, 35);
 
+        /// <summary>
+        /// Breathing room above and below every row. Applied symmetrically to both the
+        /// caption and its control, which is what keeps the two vertically centred on
+        /// each other whatever the control's height turns out to be.
+        /// </summary>
+        private const int RowGap = 4;
+
         private readonly AppSettings _settings;
         private readonly Func<HotKeyDefinition, bool> _availabilityProbe;
 
@@ -85,7 +92,12 @@ namespace ClipTray.UI
             MaximizeBox = false;
             MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(470, 530);
+
+            // Sized from its contents rather than a hard-coded ClientSize, which left a
+            // band of dead space under the last row - and a different amount of it at
+            // every DPI, because the text does not scale linearly.
+            AutoSize = true;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             _toolTip = new ToolTip();
 
@@ -93,8 +105,9 @@ namespace ClipTray.UI
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                Padding = new Padding(14, 12, 14, 8),
-                AutoSize = false
+                Padding = new Padding(14, 12, 14, 6),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // The control column absorbs slack so labels can never push controls out
@@ -132,7 +145,7 @@ namespace ClipTray.UI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                Margin = new Padding(0, 10, 0, 0)
+                Margin = new Padding(0, 12, 0, 0)
             };
 
             var heading = new Label
@@ -227,6 +240,7 @@ namespace ClipTray.UI
                 Name = "hotkeyKey",
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Width = 110,
+                Anchor = AnchorStyles.Left,
                 Margin = new Padding(0, 0, 8, 0)
             };
             foreach (var choice in KeyChoice.All())
@@ -240,6 +254,7 @@ namespace ClipTray.UI
                 Width = 72,
                 Height = 25,
                 FlatStyle = FlatStyle.System,
+                Anchor = AnchorStyles.Left,
                 Margin = Padding.Empty
             };
             testButton.Click += (s, e) => UpdateHotKeyStatus();
@@ -256,7 +271,7 @@ namespace ClipTray.UI
             {
                 Name = "hotkeyStatus",
                 AutoSize = true,
-                Margin = new Padding(0, 0, 0, 8),
+                Margin = Padding.Empty,
                 MaximumSize = new Size(300, 0)
             };
             return _statusLabel;
@@ -268,17 +283,17 @@ namespace ClipTray.UI
             {
                 Name = "backdropCombo",
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 180,
-                Margin = new Padding(0, 0, 0, 6)
+                Width = 200,
+                Margin = Padding.Empty
             };
             _backdropCombo.Items.Add(new Choice<BackdropMode>(BackdropMode.None, "None (opaque)"));
             _backdropCombo.Items.Add(new Choice<BackdropMode>(BackdropMode.Translucent, "Translucent"));
-            _backdropCombo.Items.Add(new Choice<BackdropMode>(BackdropMode.Blur, "Blur"));
-            _backdropCombo.Items.Add(new Choice<BackdropMode>(BackdropMode.Acrylic, "Acrylic"));
             _backdropCombo.Items.Add(new Choice<BackdropMode>(BackdropMode.SystemAcrylic, "System acrylic (Windows 11)"));
             _backdropCombo.SelectedIndexChanged += SettingChanged;
             _toolTip.SetToolTip(_backdropCombo,
-                "Blur only shows through when Transparency is below 100%");
+                "Translucent only shows through when Transparency is below 100%. "
+                + "System acrylic blurs on its own and ignores Transparency; "
+                + "before Windows 11 it falls back to Translucent.");
             return _backdropCombo;
         }
 
@@ -290,18 +305,22 @@ namespace ClipTray.UI
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Margin = new Padding(0, 0, 0, 6)
+                Margin = Padding.Empty
             };
 
+            // Ticks would only add height, and the height is exactly what has to be
+            // set explicitly: a TrackBar ignores Height while it is auto-sizing, which
+            // is what left the slider floating above its caption.
             _transparencyBar = new TrackBar
             {
                 Name = "transparencySlider",
                 Minimum = AppSettings.MinTransparency,
                 Maximum = AppSettings.MaxTransparency,
-                TickFrequency = 10,
-                Width = 220,
-                Height = 34,
-                Margin = new Padding(0, 0, 8, 0)
+                TickStyle = TickStyle.None,
+                AutoSize = false,
+                Width = 200,
+                Height = 26,
+                Margin = new Padding(0, 0, 10, 0)
             };
             _transparencyBar.ValueChanged += (s, e) => { UpdateTransparencyLabel(); SettingChanged(s, e); };
 
@@ -309,7 +328,8 @@ namespace ClipTray.UI
             {
                 Name = "transparencyValue",
                 AutoSize = true,
-                Margin = new Padding(0, 8, 0, 0)
+                Anchor = AnchorStyles.Left,
+                Margin = Padding.Empty
             };
 
             flow.Controls.Add(_transparencyBar);
@@ -325,7 +345,7 @@ namespace ClipTray.UI
                 Minimum = AppSettings.MinMaxResults,
                 Maximum = AppSettings.MaxMaxResults,
                 Width = 60,
-                Margin = new Padding(0, 0, 0, 6)
+                Margin = Padding.Empty
             };
             _maxResultsInput.ValueChanged += SettingChanged;
             return _maxResultsInput;
@@ -337,8 +357,8 @@ namespace ClipTray.UI
             {
                 Name = "themeCombo",
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 180,
-                Margin = new Padding(0, 0, 0, 6)
+                Width = 200,
+                Margin = Padding.Empty
             };
             _themeCombo.Items.Add(new Choice<ThemeMode>(ThemeMode.System, "Follow system"));
             _themeCombo.Items.Add(new Choice<ThemeMode>(ThemeMode.Dark, "Dark"));
@@ -407,12 +427,20 @@ namespace ClipTray.UI
 
         private void AddRow(TableLayoutPanel layout, string caption, Control control)
         {
+            // Equal top and bottom margins on both cells: the caption is centred in the
+            // row and the control sits at the top of it, so they only line up when the
+            // row is no taller than the control plus those margins.
+            control.Margin = new Padding(
+                control.Margin.Left, RowGap, control.Margin.Right, RowGap);
+
             var label = new Label
             {
                 Text = caption,
                 AutoSize = true,
-                Anchor = AnchorStyles.Left,
-                Margin = new Padding(0, 6, 12, 0)
+                // Right-anchored so short captions sit beside their control instead of
+                // stranding a gap, and anchoring on one axis only centres it vertically.
+                Anchor = AnchorStyles.Right,
+                Margin = new Padding(0, RowGap, 10, RowGap)
             };
             layout.Controls.Add(label, 0, layout.RowCount);
             layout.Controls.Add(control, 1, layout.RowCount);

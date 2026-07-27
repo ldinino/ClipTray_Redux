@@ -31,7 +31,7 @@ Estimated size impact: **+25–35 KB IL** on top of the current 252 KB `ClipTray
 | 3 | Settings format | **INI** — `ClipTray.settings.ini` next to the exe |
 | 4 | Phasing | **1 → 2 → 3** as written, each independently shippable |
 | 5 | Phase 4 extras | Build them, but **every one is an opt-in checkbox**, off by default |
-| 6 | Persist Menu size + recent file | **Open** — deferred, see §5.1 || 7 | Backdrop | **Acrylic** — `Form.Opacity` 85% + `ACCENT_ENABLE_ACRYLICBLURBEHIND` (Phase 0 winner) |
+| 6 | Persist Menu size + recent file | **Open** — deferred, see §5.1 || 7 | Backdrop | **System acrylic** — `DWMWA_SYSTEMBACKDROP_TYPE`, falling back to plain translucency before Windows 11 22H2. The accent-API Blur/Acrylic modes were withdrawn: they composite GDI child controls as transparent |
 | 8 | Sizing | **Automatic** (§4.3). Width 740 logical, 5 rows, multiplier 1.00 |
 | 9 | Size tunables | **INI-only, not in the settings dialog** — see §6.2 |
 ---
@@ -121,7 +121,7 @@ Both open the same modal `ClipBarSettingsDialog`:
 |---|---|---|
 | Enable ClipBar | checkbox | on |
 | Hotkey | 4 modifier checkboxes (Ctrl/Alt/Shift/Win) + key dropdown + **Test** button showing ✅ Available / ⚠ In use by another app | `Ctrl+Alt+Space` |
-| Backdrop | dropdown: None / Translucent / Blur / Acrylic / System acrylic | Acrylic |
+| Backdrop | dropdown: None / Translucent / System acrylic | System acrylic |
 | Transparency | slider 50–100% | 100% (opaque) |
 | Results shown | numeric 3–15 | 5 |
 | Theme | Dark / Light / Follow system | Follow system |

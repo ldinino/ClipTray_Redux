@@ -11,24 +11,31 @@ namespace ClipTray.Tests
         private static readonly Version Windows7 = new Version(6, 1, 7601);
         private static readonly Version Windows81 = new Version(6, 3, 9600);
         private static readonly Version Windows10Rtm = new Version(10, 0, 10240);
-        private static readonly Version Windows10_1709 = new Version(10, 0, 16299);
         private static readonly Version Windows10_1803 = new Version(10, 0, 17134);
         private static readonly Version Windows11 = new Version(10, 0, 22000);
         private static readonly Version Windows11_22H2 = new Version(10, 0, 22621);
 
         [TestMethod]
-        public void Resolve_SystemAcrylic_DegradesThroughEveryTier()
+        public void BackdropModes_AreOnlyTheThreeThatBehave()
+        {
+            // The accent-API blur and acrylic modes were dropped: they made GDI child
+            // controls composite as transparent and could not be relied on.
+            CollectionAssert.AreEqual(
+                new[] { "None", "Translucent", "SystemAcrylic" },
+                Enum.GetNames(typeof(BackdropMode)));
+        }
+
+        [TestMethod]
+        public void Resolve_SystemAcrylic_FallsBackToTranslucentBeforeWindows11_22H2()
         {
             Assert.AreEqual(BackdropMode.SystemAcrylic,
                 WindowBackdrop.Resolve(BackdropMode.SystemAcrylic, Windows11_22H2));
 
             // Windows 11 21H2 predates DWMWA_SYSTEMBACKDROP_TYPE.
-            Assert.AreEqual(BackdropMode.Acrylic,
+            Assert.AreEqual(BackdropMode.Translucent,
                 WindowBackdrop.Resolve(BackdropMode.SystemAcrylic, Windows11));
-            Assert.AreEqual(BackdropMode.Acrylic,
+            Assert.AreEqual(BackdropMode.Translucent,
                 WindowBackdrop.Resolve(BackdropMode.SystemAcrylic, Windows10_1803));
-            Assert.AreEqual(BackdropMode.Blur,
-                WindowBackdrop.Resolve(BackdropMode.SystemAcrylic, Windows10_1709));
             Assert.AreEqual(BackdropMode.Translucent,
                 WindowBackdrop.Resolve(BackdropMode.SystemAcrylic, Windows7));
         }
@@ -43,41 +50,9 @@ namespace ClipTray.Tests
         }
 
         [TestMethod]
-        public void Resolve_Acrylic_DegradesByOsVersion()
-        {
-            Assert.AreEqual(BackdropMode.Acrylic,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows11));
-            Assert.AreEqual(BackdropMode.Acrylic,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows10_1803));
-
-            // 1709 has blur but not acrylic.
-            Assert.AreEqual(BackdropMode.Blur,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows10_1709));
-
-            // Older than blur support: plain translucency.
-            Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows10Rtm));
-            Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows81));
-            Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Acrylic, Windows7));
-        }
-
-        [TestMethod]
-        public void Resolve_Blur_FallsBackToTranslucentBeforeWindows10_1709()
-        {
-            Assert.AreEqual(BackdropMode.Blur,
-                WindowBackdrop.Resolve(BackdropMode.Blur, Windows10_1709));
-            Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Blur, Windows10Rtm));
-            Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Blur, Windows7));
-        }
-
-        [TestMethod]
         public void Resolve_TranslucentAndNone_AreAlwaysHonoured()
         {
-            foreach (var os in new[] { Windows7, Windows81, Windows10Rtm, Windows11 })
+            foreach (var os in new[] { Windows7, Windows81, Windows10Rtm, Windows11, Windows11_22H2 })
             {
                 Assert.AreEqual(BackdropMode.Translucent,
                     WindowBackdrop.Resolve(BackdropMode.Translucent, os));
@@ -89,9 +64,9 @@ namespace ClipTray.Tests
         [TestMethod]
         public void Resolve_NeverUpgradesBeyondTheRequestedMode()
         {
-            // Asking for Translucent on Windows 11 must not silently become Acrylic.
+            // Asking for Translucent on Windows 11 must not silently become acrylic.
             Assert.AreEqual(BackdropMode.Translucent,
-                WindowBackdrop.Resolve(BackdropMode.Translucent, Windows11));
+                WindowBackdrop.Resolve(BackdropMode.Translucent, Windows11_22H2));
         }
 
         [TestMethod]
@@ -103,62 +78,17 @@ namespace ClipTray.Tests
         [TestMethod]
         public void OpacityFor_UsesTransparencyPercent()
         {
-            Assert.AreEqual(0.85D, WindowBackdrop.OpacityFor(BackdropMode.Acrylic, 85), 0.0001);
-            Assert.AreEqual(0.60D, WindowBackdrop.OpacityFor(BackdropMode.Blur, 60), 0.0001);
+            Assert.AreEqual(0.85D, WindowBackdrop.OpacityFor(BackdropMode.Translucent, 85), 0.0001);
+            Assert.AreEqual(0.60D, WindowBackdrop.OpacityFor(BackdropMode.Translucent, 60), 0.0001);
         }
 
         [TestMethod]
         public void OpacityFor_ClampsOutOfRangeValues()
         {
             // A hand-edited INI must never make the window invisible.
-            Assert.AreEqual(0.50D, WindowBackdrop.OpacityFor(BackdropMode.Acrylic, 0), 0.0001);
-            Assert.AreEqual(0.50D, WindowBackdrop.OpacityFor(BackdropMode.Acrylic, -20), 0.0001);
-            Assert.AreEqual(1.00D, WindowBackdrop.OpacityFor(BackdropMode.Acrylic, 500), 0.0001);
-        }
-
-        [TestMethod]
-        public void ToAbgr_SwapsRedAndBlueAndAppliesAlpha()
-        {
-            // The accent API wants ABGR; getting this backwards tints the bar wrongly.
-            var colour = Color.FromArgb(0x1A, 0x2B, 0x3C); // R=1A G=2B B=3C
-
-            uint packed = WindowBackdrop.ToAbgr(colour, 100);
-
-            Assert.AreEqual(0xFFu, (packed >> 24) & 0xFF, "alpha");
-            Assert.AreEqual(0x3Cu, (packed >> 16) & 0xFF, "blue");
-            Assert.AreEqual(0x2Bu, (packed >> 8) & 0xFF, "green");
-            Assert.AreEqual(0x1Au, packed & 0xFF, "red");
-        }
-
-        [TestMethod]
-        public void ToAbgr_ZeroPercentIsFullyTransparent()
-        {
-            Assert.AreEqual(0u, (WindowBackdrop.ToAbgr(Color.White, 0) >> 24) & 0xFF);
-        }
-
-        [TestMethod]
-        public void UsesAccentPolicy_IsSkippedAtFullOpacity()
-        {
-            // The accent policy makes GDI child controls composite as transparent, so
-            // it must not be applied when it cannot show any blur anyway. Leaving it on
-            // made the ClipBar query box and everything typed into it invisible.
-            Assert.IsFalse(WindowBackdrop.UsesAccentPolicy(BackdropMode.Acrylic, 1D));
-            Assert.IsFalse(WindowBackdrop.UsesAccentPolicy(BackdropMode.Blur, 1D));
-        }
-
-        [TestMethod]
-        public void UsesAccentPolicy_AppliesBelowFullOpacity()
-        {
-            Assert.IsTrue(WindowBackdrop.UsesAccentPolicy(BackdropMode.Acrylic, 0.85D));
-            Assert.IsTrue(WindowBackdrop.UsesAccentPolicy(BackdropMode.Blur, 0.5D));
-        }
-
-        [TestMethod]
-        public void UsesAccentPolicy_IgnoresModesThatDoNotUseIt()
-        {
-            Assert.IsFalse(WindowBackdrop.UsesAccentPolicy(BackdropMode.None, 0.85D));
-            Assert.IsFalse(WindowBackdrop.UsesAccentPolicy(BackdropMode.Translucent, 0.85D));
-            Assert.IsFalse(WindowBackdrop.UsesAccentPolicy(BackdropMode.SystemAcrylic, 0.85D));
+            Assert.AreEqual(0.50D, WindowBackdrop.OpacityFor(BackdropMode.Translucent, 0), 0.0001);
+            Assert.AreEqual(0.50D, WindowBackdrop.OpacityFor(BackdropMode.Translucent, -20), 0.0001);
+            Assert.AreEqual(1.00D, WindowBackdrop.OpacityFor(BackdropMode.Translucent, 500), 0.0001);
         }
     }
 
