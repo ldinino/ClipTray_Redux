@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows.Forms;
 using ClipTray.Data;
 using ClipTray.Models;
+using ClipTray.Settings;
 using ClipTray.Tokens;
 
 namespace ClipTray.UI
@@ -19,6 +20,7 @@ namespace ClipTray.UI
 
         private readonly List<ClipEntry> _entries;
         private readonly string _filePath;
+        private readonly AppSettings _settings;
 
         private ListBox _listBox;
         private TextBox _titleBox;
@@ -45,10 +47,17 @@ namespace ClipTray.UI
             get { return (int)_menuSizeUpDown.Value; }
         }
 
-        public EntriesDialog(List<ClipEntry> entries, string filePath, int menuSize, bool startNew = false)
+        /// <summary>
+        /// Raised when the user asks for ClipBar settings. The tray owns the hotkey and
+        /// the ClipBar window, so it handles the dialog and applies the result.
+        /// </summary>
+        public event EventHandler ClipBarSettingsRequested;
+
+        public EntriesDialog(List<ClipEntry> entries, string filePath, int menuSize, bool startNew = false, AppSettings settings = null, string selectTitle = null)
         {
             _entries = entries ?? throw new ArgumentNullException(nameof(entries));
             _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+            _settings = settings;
 
             InitializeComponents(menuSize);
             int designClientWidth = ClientSize.Width;
@@ -61,7 +70,17 @@ namespace ClipTray.UI
             if (startNew || _entries.Count == 0)
                 BeginNewDraft();
             else
-                LoadEntry(0);
+                LoadEntry(IndexOfTitle(selectTitle));
+        }
+
+        /// <summary>Index of the named insert, or 0 when it is absent.</summary>
+        private int IndexOfTitle(string title)
+        {
+            if (string.IsNullOrEmpty(title)) return 0;
+
+            int index = _entries.FindIndex(
+                entry => string.Equals(entry.Title, title, StringComparison.OrdinalIgnoreCase));
+            return index >= 0 ? index : 0;
         }
 
         private void InitializeComponents(int menuSize)
@@ -157,11 +176,12 @@ namespace ClipTray.UI
             var footer = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 4,
+                ColumnCount = 5,
                 RowCount = 1,
                 Padding = new Padding(8, 8, 4, 6),
                 BackColor = Color.FromArgb(238, 240, 243)
             };
+            footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // The label column absorbs the slack and is the first thing to shrink.
@@ -223,8 +243,21 @@ namespace ClipTray.UI
 
             footer.Controls.Add(_moveUpButton, 0, 0);
             footer.Controls.Add(_moveDownButton, 1, 0);
-            footer.Controls.Add(menuSizeLabel, 2, 0);
-            footer.Controls.Add(menuSizeHost, 3, 0);
+
+            // Compact glyph rather than a caption: this footer is only ~260 logical
+            // pixels wide and already carries four controls.
+            if (_settings != null)
+            {
+                var clipBarButton = MakeButton("\u2699", 32, ClipBarButton_Click);
+                clipBarButton.Name = "clipBarSettingsButton";
+                clipBarButton.Anchor = AnchorStyles.Left;
+                clipBarButton.Margin = new Padding(0, 0, 10, 0);
+                toolTip.SetToolTip(clipBarButton, "ClipBar settings...");
+                footer.Controls.Add(clipBarButton, 2, 0);
+            }
+
+            footer.Controls.Add(menuSizeLabel, 3, 0);
+            footer.Controls.Add(menuSizeHost, 4, 0);
 
             layout.Controls.Add(header, 0, 0);
             layout.Controls.Add(_listBox, 0, 1);
@@ -721,6 +754,12 @@ namespace ClipTray.UI
                 BeginNewDraft();
             else
                 LoadEntry(_currentIndex);
+        }
+
+        private void ClipBarButton_Click(object sender, EventArgs e)
+        {
+            var handler = ClipBarSettingsRequested;
+            if (handler != null) handler(this, EventArgs.Empty);
         }
 
         private void MoveCurrent(int offset)

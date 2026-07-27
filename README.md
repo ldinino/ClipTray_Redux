@@ -22,14 +22,18 @@ On first launch, ClipTray creates a default `ClipTray.txt` file in the same dire
 ## Features
 
 - **Copy entries** — Right-click the tray icon and click any entry to copy it to the clipboard.
+- **ClipBar** — Press **Ctrl+Alt+Space** anywhere in Windows to summon a floating search bar, type a few letters of an insert's name, and press Enter to copy it. Arrow keys move the selection, Esc dismisses, and focus returns to whatever you were working in. It fades in with rounded corners and follows your Windows light/dark theme.
+- **ClipBar settings** — Configure it from Options > ClipBar, or the gear button in the editor. Choose the shortcut (with a **Test** button that tells you whether another application already owns it), the backdrop, transparency, how many results to show, and the theme. Changes apply straight away.
+- **ClipBar extras** — Four optional behaviours, all off unless you turn them on: paste automatically after copying, list recently used inserts first, show what tokens will produce instead of the raw `{date}`, and Alt+Enter to open an insert in the editor rather than copying it.
 - **Rich text** — Compose inserts with bold, italic, underline, strikethrough, font, size, text and highlight color, bullets, alignment, and titled hyperlinks. Pasted formatting from browsers and Word is preserved; copied links remain clickable in browser-based and native rich-text editors, with clean titles in plain-text apps. Plain-text inserts stay plain on disk.
 - **Unified editor** — Browse inserts on the left and edit the selected draft on the right. Create, duplicate, delete, copy, preview, save, or discard without bouncing between dialogs.
 - **Direct ordering** — Move the selected insert up or down from the list footer; the tray menu order updates with it.
 - **Quick capture** — Use "New insert..." from the tray menu, or double-click the tray icon, to open a fresh draft in the editor.
 - **Dynamic tokens** — Embed placeholders like `{date:yyyy-MM-dd}`, `{time:h:mm tt}`, `{datetime}`, or `{clipboard}` in any entry. They're resolved at paste time, so a single entry can produce fresh content. The composer's **Insert ▾** button makes it easy to add tokens without remembering the syntax. Tokens work inside rich text too.
 - **Menu size** — Control how many inserts appear in the tray menu (the rest remain available in "Open editor...").
-- **Multiple files** — Open different `.txt` files via Options > File > Open. The most recent file is saved for quick switching.
-- **High-DPI support** — Windows scale and monitor changes use PerMonitorV2 awareness, with every ClipTray window scaling from a 96-DPI layout baseline.
+- **Multiple files** — Open different `.txt` files via Options > File > Open. The most recent file is remembered between runs for quick switching.
+- **Settings file** — ClipBar's shortcut and appearance, the menu size, and the recent file live in `ClipTray.settings.ini` next to the exe. It's plain text, safe to delete (defaults return), hand-editable, and keeps your inserts file free of configuration. Your `ClipTray.txt` format is unchanged.
+- **High-DPI support** — Windows scale and monitor changes use PerMonitorV2 awareness, with every ClipTray window scaling from a 96-DPI layout baseline. ClipBar additionally scales with screen resolution, so it stays readable on a 4K display running at 100%.
 - **Start with Windows** — Enable or disable per-user startup from Options > Start with Windows. No administrator access or installer is required.
 - **Single instance** — Only one copy of ClipTray runs at a time.
 

@@ -5,8 +5,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows.Forms;
+using ClipTray.ClipBar;
 using ClipTray.Data;
 using ClipTray.Models;
+using ClipTray.Settings;
 using ClipTray.Tokens;
 
 namespace ClipTray.UI
@@ -19,12 +21,26 @@ namespace ClipTray.UI
         private List<ClipEntry> _entries;
         private int _menuSize = 20;
         private Icon _applicationIcon;
+        private AppSettings _settings;
+        private string _settingsPath;
+        private GlobalHotKey _clipBarHotKey;
+        private ClipBarWindow _clipBarWindow;
 
         public TrayApplicationContext()
         {
             _filePath = Path.Combine(
                 Path.GetDirectoryName(Application.ExecutablePath),
                 "ClipTray.txt");
+
+            _settingsPath = SettingsStore.DefaultPath(Application.ExecutablePath);
+            _settings = SettingsStore.Load(_settingsPath);
+            _menuSize = _settings.MenuSize;
+            _recentFilePath = _settings.RecentFile;
+
+            // Write the file on first run so the ClipBar shortcut is discoverable
+            // and editable without having to guess the key names.
+            if (!File.Exists(_settingsPath))
+                SettingsStore.Save(_settingsPath, _settings);
 
             if (!File.Exists(_filePath))
             {
@@ -48,6 +64,166 @@ namespace ClipTray.UI
             };
 
             _notifyIcon.MouseDoubleClick += NotifyIcon_MouseDoubleClick;
+
+            SetUpClipBar();
+        }
+
+        private void SetUpClipBar()
+        {
+            if (!_settings.ClipBarEnabled) return;
+
+            _clipBarHotKey = new GlobalHotKey();
+            _clipBarHotKey.Pressed += ClipBarHotKey_Pressed;
+
+            if (_clipBarHotKey.TryRegister(_settings.ClipBarHotKey)) return;
+
+            // Another application already owns the combination. Say so once, in a
+            // balloon, and carry on - ClipBar is not worth blocking startup for.
+            string detail = _clipBarHotKey.LastError == GlobalHotKey.ErrorHotKeyAlreadyRegistered
+                ? "another application is already using it"
+                : "Windows refused the shortcut (error " + _clipBarHotKey.LastError + ")";
+
+            _notifyIcon.ShowBalloonTip(
+                10000,
+                "ClipBar shortcut unavailable",
+                "Could not register " + _settings.ClipBarHotKey
+                    + " because " + detail + ". Edit Hotkey in " + SettingsStore.FileName
+                    + " to pick another.",
+                ToolTipIcon.Warning);
+        }
+
+        private void ClipBarHotKey_Pressed(object sender, EventArgs e)
+        {
+            if (_clipBarWindow == null || _clipBarWindow.IsDisposed)
+            {
+                _clipBarWindow = new ClipBarWindow(_settings);
+                _clipBarWindow.EntryCopied += ClipBar_EntryCopied;
+                _clipBarWindow.EditRequested += ClipBar_EditRequested;
+            }
+
+            if (_clipBarWindow.Visible)
+            {
+                _clipBarWindow.Hide();
+                return;
+            }
+
+            _entries = SafeParse(_filePath);
+            _clipBarWindow.ShowFor(_entries);
+        }
+
+        private void ClipBar_EntryCopied(object sender, ClipEntry entry)
+        {
+            if (entry != null)
+            {
+                _settings.RecordUse(entry.Title);
+                SaveSettings();
+            }
+
+            if (!_settings.AutoPaste) return;
+
+            // Give the restored window a moment to actually take focus before the
+            // keystrokes are sent, or they land nowhere.
+            var timer = new Timer { Interval = 120 };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                timer.Dispose();
+                AutoPaste.SendPaste();
+            };
+            timer.Start();
+        }
+
+        private void ClipBar_EditRequested(object sender, ClipEntry entry)
+        {
+            if (entry == null) return;
+
+            _entries = SafeParse(_filePath);
+            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize, false, _settings, entry.Title))
+            {
+                dlg.ClipBarSettingsRequested += (s, args) => ShowClipBarSettings(dlg);
+                dlg.ShowDialog();
+                _menuSize = dlg.MenuSize;
+            }
+            SaveSettings();
+            RefreshMenu();
+        }
+
+        private void ClipBarSettingsItem_Click(object sender, EventArgs e)
+        {
+            ShowClipBarSettings(null);
+        }
+
+        /// <summary>
+        /// Opens the ClipBar settings dialog and applies the result immediately.
+        /// </summary>
+        internal void ShowClipBarSettings(IWin32Window owner)
+        {
+            using (var dialog = new ClipBarSettingsDialog(_settings, IsHotKeyAvailable))
+            {
+                // CenterParent does nothing without an owner, which is the case when
+                // the dialog is opened from the tray menu.
+                dialog.StartPosition = owner == null
+                    ? FormStartPosition.CenterScreen
+                    : FormStartPosition.CenterParent;
+
+                dialog.ApplyRequested += (s, e) => ApplyClipBarSettings(dialog);
+
+                if ((owner == null ? dialog.ShowDialog() : dialog.ShowDialog(owner)) != DialogResult.OK)
+                    return;
+
+                ApplyClipBarSettings(dialog);
+            }
+        }
+
+        private void ApplyClipBarSettings(ClipBarSettingsDialog dialog)
+        {
+            dialog.ApplyTo(_settings);
+            SaveSettings();
+            ReapplyClipBar();
+            dialog.NotifyApplied();
+        }
+
+        /// <summary>
+        /// The shortcut we have already claimed would fail a naive probe, because we
+        /// are the application holding it.
+        /// </summary>
+        private bool IsHotKeyAvailable(ClipBar.HotKeyDefinition definition)
+        {
+            if (_clipBarHotKey != null && definition.Equals(_clipBarHotKey.Current))
+                return true;
+
+            return GlobalHotKey.IsAvailable(definition);
+        }
+
+        /// <summary>
+        /// Re-registers the shortcut and discards the window so appearance settings,
+        /// which are applied when the handle is created, take effect next summon.
+        /// </summary>
+        private void ReapplyClipBar()
+        {
+            if (_clipBarWindow != null)
+            {
+                _clipBarWindow.EntryCopied -= ClipBar_EntryCopied;
+                _clipBarWindow.EditRequested -= ClipBar_EditRequested;
+                _clipBarWindow.Dispose();
+                _clipBarWindow = null;
+            }
+
+            if (_clipBarHotKey != null)
+            {
+                _clipBarHotKey.Pressed -= ClipBarHotKey_Pressed;
+                _clipBarHotKey.Dispose();
+                _clipBarHotKey = null;
+            }
+
+            SetUpClipBar();
+        }
+
+        private void SaveSettings()
+        {
+            _settings.MenuSize = _menuSize;
+            _settings.RecentFile = _recentFilePath;
+            SettingsStore.Save(_settingsPath, _settings);
         }
 
         public void RefreshMenu()
@@ -81,6 +257,14 @@ namespace ClipTray.UI
             };
             startWithWindowsItem.Click += StartWithWindowsItem_Click;
             optionsMenu.DropDownItems.Add(startWithWindowsItem);
+
+            var clipBarItem = new ToolStripMenuItem("ClipBar...")
+            {
+                Name = "clipBarSettingsItem"
+            };
+            clipBarItem.Click += ClipBarSettingsItem_Click;
+            optionsMenu.DropDownItems.Add(clipBarItem);
+
             optionsMenu.DropDownItems.Add(new ToolStripSeparator());
 
             // Options > File submenu
@@ -166,42 +350,24 @@ namespace ClipTray.UI
             var item = (ToolStripMenuItem)sender;
             var entry = (ClipEntry)item.Tag;
             CopyToClipboard(entry);
+            _settings.RecordUse(entry.Title);
+            SaveSettings();
         }
 
         private void CopyToClipboard(ClipEntry entry)
         {
-            if (string.IsNullOrEmpty(entry.Text))
-                return;
-
-            var visibleText = RichTextHelpers.GetVisibleText(entry.Rtf, entry.Text);
-            var resolvedText = TokenSubstitution.Resolve(visibleText);
-
-            try
-            {
-                if (!string.IsNullOrEmpty(entry.Rtf))
-                {
-                    var resolvedRtf = TokenSubstitution.ResolveRtf(entry.Rtf);
-                    var data = RichTextHelpers.CreateClipboardData(resolvedText, resolvedRtf);
-                    Clipboard.SetDataObject(data, true);
-                }
-                else
-                {
-                    Clipboard.SetText(resolvedText);
-                }
-            }
-            catch (System.Runtime.InteropServices.ExternalException)
-            {
-                // Clipboard locked by another process — silently ignore
-            }
+            ClipboardWriter.Copy(entry);
         }
 
         private void ShowAddDialog()
         {
-            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize, true))
+            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize, true, _settings))
             {
+                dlg.ClipBarSettingsRequested += (s, args) => ShowClipBarSettings(dlg);
                 dlg.ShowDialog();
                 _menuSize = dlg.MenuSize;
             }
+            SaveSettings();
             RefreshMenu();
         }
 
@@ -263,6 +429,7 @@ namespace ClipTray.UI
 
                 _recentFilePath = _filePath;
                 _filePath = newPath;
+                SaveSettings();
                 RefreshMenu();
             }
         }
@@ -275,16 +442,19 @@ namespace ClipTray.UI
             var temp = _filePath;
             _filePath = _recentFilePath;
             _recentFilePath = temp;
+            SaveSettings();
             RefreshMenu();
         }
 
         private void EntriesItem_Click(object sender, EventArgs e)
         {
-            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize))
+            using (var dlg = new EntriesDialog(_entries, _filePath, _menuSize, false, _settings))
             {
+                dlg.ClipBarSettingsRequested += (s, args) => ShowClipBarSettings(dlg);
                 dlg.ShowDialog();
                 _menuSize = dlg.MenuSize;
             }
+            SaveSettings();
             RefreshMenu();
         }
 
@@ -309,6 +479,17 @@ namespace ClipTray.UI
         {
             if (disposing)
             {
+                if (_clipBarHotKey != null)
+                {
+                    _clipBarHotKey.Pressed -= ClipBarHotKey_Pressed;
+                    _clipBarHotKey.Dispose();
+                    _clipBarHotKey = null;
+                }
+                if (_clipBarWindow != null)
+                {
+                    _clipBarWindow.Dispose();
+                    _clipBarWindow = null;
+                }
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 _applicationIcon.Dispose();

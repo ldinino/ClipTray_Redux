@@ -29,7 +29,7 @@ namespace ClipTray.Tests
                 .Where(type => !type.IsAbstract && typeof(Form).IsAssignableFrom(type))
                 .ToArray();
 
-            Assert.AreEqual(5, formTypes.Length);
+            Assert.AreEqual(6, formTypes.Length);
             foreach (var formType in formTypes)
             {
                 Assert.IsTrue(
