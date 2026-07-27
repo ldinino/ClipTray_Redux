@@ -164,7 +164,10 @@ namespace ClipTray.UI
             };
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            // The label column absorbs the slack and is the first thing to shrink.
+            // Text does not scale exactly linearly with DPI, so leaving every column
+            // AutoSize let accumulated growth push the spinner off the panel at 200%.
+            footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
@@ -183,8 +186,10 @@ namespace ClipTray.UI
             var menuSizeLabel = new Label
             {
                 Text = "Menu size",
-                AutoSize = true,
-                Anchor = AnchorStyles.Left,
+                AutoSize = false,
+                AutoEllipsis = true,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleRight,
                 Margin = new Padding(0, 0, 5, 0)
             };
             _menuSizeUpDown = new NumericUpDown
@@ -234,7 +239,10 @@ namespace ClipTray.UI
             var header = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 48,
+                // Auto-sized rather than a fixed height: the action buttons need more
+                // than twice 48px once fonts and paddings scale to 200%.
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 1,
                 Margin = Padding.Empty,
